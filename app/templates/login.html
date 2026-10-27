@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Anmelden · {{ site_name }}{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h1>Anmelden</h1>
+  <p class="muted">Melde dich an, um deine Galerien anzusehen und Bilder herunterzuladen.</p>
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/login" class="form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>Benutzername<input name="username" autocomplete="username" required autofocus></label>
+    <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn btn-primary btn-block">Anmelden</button>
+  </form>
+  <p class="muted small">Du hast einen Galerie-Link erhalten? Öffne ihn direkt, dafür ist keine Anmeldung nötig.</p>
+</div>
+{% endblock %}

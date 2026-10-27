@@ -1,0 +1,28 @@
+<ul class="share-list">
+      {% for s in shares %}
+      {% set url = public_base ~ '/s/' ~ s.token %}
+      {% set expired = s.expires_at and s.expires_at < today %}
+      <li class="{{ 'expired' if expired }}">
+        <div class="share-top">
+          <strong>{{ s.label or 'Ohne Bezeichnung' }}</strong>
+          {% if s.project_id %}<span class="muted small">{{ 'Ordner «' ~ s.folder_name ~ '»' if s.folder_id else 'ganzes Projekt' }}</span>{% endif %}
+          <span class="share-tags">
+            {% if s.password_hash %}<span class="pill">🔒 Passwort</span>{% endif %}
+            {% if s.watermark %}<span class="pill">Wasserzeichen</span>{% elif not s.allow_download %}<span class="pill">kein Download</span>{% endif %}
+            {% if s.can_select %}<span class="pill">♥ Auswahl</span>{% endif %}
+            {% if s.can_comment %}<span class="pill">💬 Kommentare</span>{% endif %}
+            {% if s.expires_at %}<span class="pill">{{ 'abgelaufen' if expired else 'bis' }} {{ s.expires_at|de_date }}</span>{% endif %}
+            <span class="pill">{{ s.views }} Aufrufe · {{ s.guest_count }} Gäste</span>
+          </span>
+        </div>
+        <div class="share-url">
+          <input readonly value="{{ url }}" onclick="this.select()">
+          <button type="button" class="btn btn-sm" data-copy="{{ url }}">Kopieren</button>
+          <form method="post" action="/admin/links/{{ s.id }}/loeschen" data-confirm="Diesen Link widerrufen? Er funktioniert danach nicht mehr, und Auswahlen von Gästen dieses Links werden gelöscht.">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn btn-sm btn-danger">Widerrufen</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen · {{ site_name }}{% endblock %}
+{% block content %}
+<h1 class="page-title">Einstellungen</h1>
+<form method="post" enctype="multipart/form-data" class="form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="admin-cols">
+    <section class="panel">
+      <h2>Branding</h2>
+      <label>Name der Galerie<input name="site_name" maxlength="80" value="{{ settings.site_name }}"></label>
+      <label>Akzentfarbe
+        <span class="color-row"><input type="color" name="accent_color" value="{{ accent }}"><span class="muted small">Für Schaltflächen und Hervorhebungen</span></span>
+      </label>
+      <label>Logo (PNG, JPEG, WebP)<input type="file" name="logo_file" accept="image/png,image/jpeg,image/webp"></label>
+      {% if settings.logo %}
+      <div class="logo-preview"><img src="/branding/logo" alt="Logo"></div>
+      <label class="check"><input type="checkbox" name="logo_remove" value="1"> Logo entfernen</label>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2>Wasserzeichen</h2>
+      <p class="muted small">Wird für Alben und Permalinks mit aktiviertem Wasserzeichen auf alle Vorschauen gelegt. Die Originale bleiben unverändert.</p>
+      <label>Text<input name="watermark_text" maxlength="80" value="{{ settings.watermark_text }}" placeholder="{{ settings.site_name }}"></label>
+      <label>Deckkraft: <output data-range-out>{{ settings.watermark_opacity }}</output> %
+        <input type="range" name="watermark_opacity" min="5" max="90" value="{{ settings.watermark_opacity }}" data-range></label>
+      <label class="check"><input type="checkbox" name="watermark_logo" value="1" {{ 'checked' if settings.watermark_logo == '1' }} {{ 'disabled' if not settings.logo }}> Logo statt Text verwenden{% if not settings.logo %} <span class="muted">(zuerst Logo hochladen)</span>{% endif %}</label>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Benachrichtigungen</h2>
+    {% if smtp_ok %}
+      <p class="muted small">E-Mail-Versand über <b>{{ smtp_host }}</b> ist eingerichtet.</p>
+    {% else %}
+      <p class="muted small">E-Mail-Versand ist nicht eingerichtet. Setze dafür <code>GALLERY_SMTP_HOST</code>, <code>GALLERY_SMTP_FROM</code> und optional <code>GALLERY_SMTP_USER</code> / <code>GALLERY_SMTP_PASSWORD</code>. Neuigkeiten erscheinen in jedem Fall im Workflow-Dashboard.</p>
+    {% endif %}
+    <label>E-Mail-Adresse für Benachrichtigungen<input type="email" name="notify_email" value="{{ settings.notify_email }}" placeholder="du@example.ch"></label>
+    <label class="check"><input type="checkbox" name="notify_selection" value="1" {{ 'checked' if settings.notify_selection == '1' }}> Wenn jemand eine Auswahl abschliesst</label>
+    <label class="check"><input type="checkbox" name="notify_comment" value="1" {{ 'checked' if settings.notify_comment == '1' }}> Bei jedem neuen Kommentar</label>
+  </section>
+
+  <div class="form-actions"><button class="btn btn-primary">Einstellungen speichern</button></div>
+</form>
+<section class="panel mt" id="lightroom">
+  <div class="panel-head">
+    <h2>Lightroom-Plugin</h2>
+    <a class="btn btn-sm" href="/admin/plugin/lightroom.zip">Plugin herunterladen</a>
+  </div>
+  <p class="muted small">Das Plugin meldet sich mit einem API-Schlüssel an und darf nur Bilder in Alben hochladen.
+    In Lightroom trägst du als Server-Adresse <code>{{ public_base }}</code> ein.
+    Aus Sicherheitsgründen wird ein Schlüssel nur direkt nach dem Erzeugen angezeigt – brauchst du ihn erneut,
+    erzeuge hier einen neuen und trage ihn in Lightroom ein.</p>
+  {% if new_token %}
+  <div class="token-panel panel">
+    <p><b>Neuer Schlüssel für «{{ token_user.display_name or token_user.username }}»</b> – jetzt kopieren und in Lightroom einfügen.</p>
+    <div class="share-url">
+      <input readonly value="{{ new_token }}" onclick="this.select()">
+      <button type="button" class="btn btn-sm btn-primary" data-copy="{{ new_token }}">Kopieren</button>
+    </div>
+  </div>
+  {% endif %}
+  {% if plugins %}
+  <ul class="item-list">
+    {% for p in plugins %}
+    <li>
+      <div class="item-main">
+        <a href="/admin/benutzer/{{ p.id }}"><b>{{ p.display_name or p.username }}</b></a>
+        {% if not p.active %}<span class="pill">inaktiv</span>{% endif %}
+        <div class="muted small">{{ p.project_count ~ ' Projekt' ~ ('e' if p.project_count > 1 else '') if p.project_count else 'alle Projekte' }} ·
+          zuletzt verwendet: {{ p.last_login|local_dt if p.last_login else 'noch nie' }}</div>
+      </div>
+      <form method="post" action="/admin/benutzer/{{ p.id }}/schluessel" data-confirm="Neuen Schlüssel für «{{ p.display_name or p.username }}» erzeugen? Der bisherige funktioniert danach nicht mehr.">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="back" value="einstellungen">
+        <button class="btn btn-sm">Neuen Schlüssel erzeugen und anzeigen</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="/admin/benutzer/neu" class="form row-form mt">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="role" value="plugin">
+    <label>Neuer Plugin-Zugang<input name="display_name" maxlength="80" required placeholder="z. B. Lightroom Laptop"></label>
+    <input type="hidden" name="back" value="einstellungen">
+    <button class="btn">Zugang anlegen</button>
+  </form>
+</section>
+
+{% if smtp_ok and settings.notify_email %}
+<form method="post" action="/admin/einstellungen/testmail" class="mt">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="btn">Test-E-Mail senden</button>
+</form>
+{% endif %}
+{% endblock %}

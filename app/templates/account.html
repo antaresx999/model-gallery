@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Konto · {{ site_name }}{% endblock %}
+{% block content %}
+<h1 class="page-title">Mein Konto</h1>
+<div class="panel narrow">
+  <dl class="kv">
+    <dt>Benutzername</dt><dd>{{ user.username }}</dd>
+    <dt>Name</dt><dd>{{ user.display_name }}</dd>
+    {% if user.email %}<dt>E-Mail</dt><dd>{{ user.email }}</dd>{% endif %}
+  </dl>
+  <h2>Passwort ändern</h2>
+  <form method="post" class="form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Aktuelles Passwort<input type="password" name="current" autocomplete="current-password" required></label>
+    <label>Neues Passwort<input type="password" name="new" minlength="8" autocomplete="new-password" required></label>
+    <label>Neues Passwort bestätigen<input type="password" name="confirm" minlength="8" autocomplete="new-password" required></label>
+    <button class="btn btn-primary">Passwort ändern</button>
+  </form>
+</div>
+{% endblock %}

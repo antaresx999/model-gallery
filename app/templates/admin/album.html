@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ album.title }} verwalten · {{ site_name }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/admin/projekte">Projekte</a> /
+  {% if project %}<a href="/admin/projekte/{{ project.id }}">{{ project.title }}</a> /
+  {% for f in chain %}<a href="/admin/projekte/{{ project.id }}?ordner={{ f.id }}">{{ f.name }}</a> / {% endfor %}{% endif %}
+  {{ album.title }}</nav>
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ album.title }}
+      {% if not album.published %}<span class="badge badge-draft">Entwurf</span>{% endif %}</h1>
+    <div class="album-facts">
+      <span>{{ images|length }} Bilder</span><span>{{ total_size|human_size }}</span>
+      {% if album.shoot_date %}<span>{{ album.shoot_date|de_date }}</span>{% endif %}
+      {% if album.location %}<span>{{ album.location }}</span>{% endif %}
+      <span>Download: {{ 'erlaubt' if album.allow_download and not album.watermark else 'gesperrt' }}{% if album.allow_raw and album.allow_download and not album.watermark %} inkl. RAW{% endif %}</span>
+      {% if album.watermark %}<span>Wasserzeichen</span>{% endif %}
+      {% if album.selection_limit %}<span>max. {{ album.selection_limit }} Bilder</span>{% endif %}
+      {% if album.expires_at %}<span class="{{ 'text-danger' if album.expires_at < today }}">verfügbar bis {{ album.expires_at|de_date }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="album-actions">
+    <select class="status-select" data-status-select="{{ album.id }}" aria-label="Workflow-Status">
+      {% for key, label in STATUSES %}<option value="{{ key }}" {{ 'selected' if album.status == key }}>{{ label }}</option>{% endfor %}
+    </select>
+    <a class="btn" href="/album/{{ album.slug }}">Kundenansicht</a>
+    <a class="btn" href="/admin/alben/{{ album.id }}/bearbeiten">Bearbeiten</a>
+  </div>
+</div>
+
+<nav class="subnav">
+  <a href="#auswahlen">Auswahlen ({{ reviewers|selectattr('completed_at')|list|length }}/{{ reviewers|length }})</a>
+  <a href="#kommentare">Offene Kommentare ({{ open_comments|length }})</a>
+  <a href="#upload">Upload</a>
+  <a href="#zugriff">Zugriff</a>
+  <a href="#links">Permalinks ({{ shares|length }})</a>
+  <a href="#bilder">Bilder ({{ images|length }})</a>
+</nav>
+
+<div class="admin-cols">
+  <section class="panel" id="auswahlen">
+    <h2>Auswahlen</h2>
+    {% if reviewers %}
+    <table class="table compact">
+      <thead><tr><th>Person</th><th>Ausgewählt</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for r in reviewers %}
+        <tr>
+          <td><b>{{ r.display_name or r.username }}</b>
+            <div class="muted small">{% if r.role == 'guest' %}Gast · {{ r.email }}{% if r.share_label %} · Link «{{ r.share_label }}»{% endif %}{% else %}Kunde · @{{ r.username }}{% endif %}</div></td>
+          <td>♥ {{ r.sel_count }}{% if r.comment_count %} · 💬 {{ r.comment_count }}{% endif %}</td>
+          <td>{% if r.completed_at %}<span class="pill pill-ok">✓ {{ r.completed_at|local_dt }}</span>{% elif r.sel_count %}<span class="pill">läuft</span>{% else %}<span class="muted small">–</span>{% endif %}</td>
+          <td><a class="btn btn-sm" href="/admin/alben/{{ album.id }}/auswahl/{{ r.id }}">Details</a></td>
+        </tr>
+        {% if r.note %}<tr class="note-row"><td colspan="4">„{{ r.note }}“</td></tr>{% endif %}
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Noch niemand hat Zugriff. Gib Kunden Zugriff oder erstelle einen Permalink.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel" id="kommentare">
+    <h2>Offene Kommentare</h2>
+    {% if open_comments %}
+    <ul class="admin-comments">
+      {% for c in open_comments %}
+      <li>
+        <a href="/album/{{ album.slug }}/foto/{{ c.image_id }}#kommentare"><img src="/media/{{ c.image_id }}/thumb?v={{ c.version }}" alt="" loading="lazy"></a>
+        <div>
+          <div><span class="kind-tag kind-{{ c.kind }}">{{ dict(COMMENT_KINDS)[c.kind] }}</span> <b>{{ c.author_name }}</b> · <span class="muted small">{{ c.original_name }} · {{ c.created_at|local_dt }}</span></div>
+          <p>{{ c.body }}</p>
+        </div>
+        <form method="post" action="/admin/kommentare/{{ c.id }}/erledigt"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn btn-sm" title="Als erledigt markieren">✓ Erledigt</button></form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Keine offenen Kommentare.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel" id="upload">
+  <h2>Bilder hochladen</h2>
+  <label class="dropzone" data-upload="/admin/alben/{{ album.id }}/upload">
+    <input type="file" multiple accept=".jpg,.jpeg,.png,.webp,.tif,.tiff,image/*,.dng,.cr2,.cr3,.nef,.arw,.raf,.orf,.rw2,.pef,.srw,.3fr,.iiq">
+    <strong>Bilder hierher ziehen</strong> oder klicken zum Auswählen
+    <span class="muted small">JPEG, PNG, WebP, TIFF · RAW-Dateien werden dem gleichnamigen Bild angehängt · Originale bleiben unverändert</span>
+  </label>
+  <label class="check small mt"><input type="checkbox" data-upload-replace checked> Gleichnamige Bilder als <b>neue Version</b> ersetzen (Auswahl und Kommentare bleiben erhalten), z. B. für bearbeitete Exporte</label>
+  <div class="progress" data-upload-progress hidden><span></span><em></em></div>
+  <ul class="upload-list" data-upload-list></ul>
+</section>
+
+<div class="admin-cols">
+  <section class="panel" id="zugriff">
+    <h2>Zugriff für Kunden</h2>
+    {% if models %}
+    <form method="post" action="/admin/alben/{{ album.id }}/zugriff" class="form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="checklist">
+        {% for u in models %}
+        <label class="check">
+          <input type="checkbox" name="user_ids" value="{{ u.id }}" {{ 'checked' if u.has_access }}>
+          {{ u.display_name or u.username }} <span class="muted">@{{ u.username }}</span>
+          {% if u.via_project %}<span class="pill" title="Hat Zugriff auf das ganze Projekt">über Projekt</span>{% endif %}
+          {% if not u.active %}<span class="pill">inaktiv</span>{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      <button class="btn btn-primary">Zugriff speichern</button>
+    </form>
+    {% else %}
+    <p class="muted">Noch keine Kunden angelegt. <a href="/admin/benutzer">Benutzer verwalten →</a></p>
+    {% endif %}
+  </section>
+
+  <section class="panel" id="links">
+    <h2>Permalinks</h2>
+    {% if project_links %}
+    <p class="muted small">Zusätzlich {{ 'gilt' if project_links|length == 1 else 'gelten' }} {{ project_links|length }}
+      Projekt-Link{{ 's' if project_links|length > 1 }} für dieses Album –
+      <a href="/admin/projekte/{{ project.id }}#links">im Projekt verwalten →</a></p>
+    {% endif %}
+    {% if shares %}
+    {% include "admin/_share_list.html" %}
+    {% endif %}
+    <details {{ 'open' if not shares }}>
+      <summary>Neuen Permalink erstellen</summary>
+      <form method="post" action="/admin/alben/{{ album.id }}/links" class="form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>Bezeichnung<input name="label" maxlength="80" placeholder="z. B. für Anna oder Agentur"></label>
+        <div class="form-row">
+          <label>Passwort (optional)<input name="password" type="text" autocomplete="off"></label>
+          <label>Gültig bis (optional)<input name="expires_at" type="date" min="{{ today }}"></label>
+        </div>
+        <label class="check"><input type="checkbox" name="can_select" value="1" checked> Bilder auswählen</label>
+        <label class="check"><input type="checkbox" name="can_comment" value="1" checked> Kommentieren & markieren</label>
+        <label class="check"><input type="checkbox" name="allow_download" value="1" checked> Download erlauben</label>
+        <label class="check"><input type="checkbox" name="watermark" value="1"> Wasserzeichen (Proofing, ohne Download)</label>
+        <button class="btn btn-primary">Link erstellen</button>
+      </form>
+    </details>
+  </section>
+</div>
+
+<section class="panel" id="bilder">
+  <div class="panel-head">
+    <h2>Bilder ({{ images|length }})</h2>
+    {% if images %}<label class="check small"><input type="checkbox" data-select-all> Alle auswählen</label>{% endif %}
+  </div>
+  {% if images %}
+  <form method="post" action="/admin/bilder/loeschen" id="bulk" data-confirm="Ausgewählte Bilder endgültig löschen?">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="album_id" value="{{ album.id }}">
+  </form>
+  <div class="thumb-grid admin-grid">
+    {% for img in images %}
+    <figure class="thumb{{ ' is-cover' if album.cover_image_id == img.id }}">
+      <a href="/album/{{ album.slug }}/foto/{{ img.id }}"><img src="{{ media_url(img, 'thumb') }}" alt="" loading="lazy"></a>
+      {% if album.cover_image_id == img.id %}<span class="badge badge-cover">Titelbild</span>{% endif %}
+      {% if img.fav_count %}<span class="badge badge-fav">♥ {{ img.fav_count }}</span>{% endif %}
+      {% if img.open_comments %}<span class="badge badge-comments">💬 {{ img.open_comments }}</span>{% endif %}
+      {% if img.version > 1 %}<span class="badge badge-version">v{{ img.version }}</span>{% endif %}
+      {% if img.raw_stored %}<span class="badge badge-raw" title="{{ img.raw_name }}">RAW</span>{% endif %}
+      <figcaption>
+        <label class="check small"><input type="checkbox" name="image_ids" value="{{ img.id }}" form="bulk"><span class="thumb-name" title="{{ img.original_name }}">{{ img.original_name }}</span></label>
+        {% if album.cover_image_id != img.id %}
+        <form method="post" action="/admin/bilder/{{ img.id }}/titelbild">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="linkbtn small" title="Als Titelbild verwenden">★</button>
+        </form>
+        {% endif %}
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+  <div class="form-actions"><button class="btn btn-danger" form="bulk">Ausgewählte löschen</button></div>
+  {% else %}
+  <p class="muted">Noch keine Bilder hochgeladen.</p>
+  {% endif %}
+</section>
+{% endblock %}

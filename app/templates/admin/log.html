@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Protokoll · {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">Protokoll</h1>
+  <form method="get" class="inline-form">
+    <select name="aktion" onchange="this.form.submit()" aria-label="Aktion filtern">
+      <option value="">Alle Aktionen ({{ total if not aktion }})</option>
+      {% for a in actions %}<option value="{{ a }}" {{ 'selected' if a == aktion }}>{{ EVENT_LABELS.get(a, a) }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+<section class="panel">
+  {% if events %}
+  <table class="table compact">
+    <thead><tr><th>Zeit</th><th>Aktion</th><th>Wer</th><th>Album</th><th>Details</th><th>IP</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr>
+        <td class="nowrap muted">{{ e.at|local_dt }}</td>
+        <td class="nowrap">{{ EVENT_LABELS.get(e.action, e.action) }}</td>
+        <td>{{ e.actor_name or '–' }}</td>
+        <td>{% if e.album_id and e.album_title %}<a href="/admin/alben/{{ e.album_id }}">{{ e.album_title }}</a>{% else %}–{% endif %}</td>
+        <td class="muted clamp">{{ e.detail }}</td>
+        <td class="muted small nowrap">{{ e.ip }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if pages > 1 %}
+  <div class="pager">
+    {% if seite > 1 %}<a class="btn btn-sm" href="?aktion={{ aktion }}&seite={{ seite - 1 }}">← Neuer</a>{% endif %}
+    <span class="muted small">Seite {{ seite }} von {{ pages }}</span>
+    {% if seite < pages %}<a class="btn btn-sm" href="?aktion={{ aktion }}&seite={{ seite + 1 }}">Älter →</a>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <p class="muted">Noch keine Einträge.</p>
+  {% endif %}
+</section>
+{% endblock %}

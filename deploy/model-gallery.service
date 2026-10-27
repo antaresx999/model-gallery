@@ -1,0 +1,24 @@
+[Unit]
+Description=Model Gallery – Fotogalerie
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gallery
+Group=gallery
+WorkingDirectory=/opt/model-gallery
+EnvironmentFile=/etc/model-gallery.env
+ExecStart=/opt/model-gallery/venv/bin/uvicorn app.main:app --host ${GALLERY_HOST} --port ${GALLERY_PORT} --workers 2 --proxy-headers --forwarded-allow-ips *
+Restart=on-failure
+RestartSec=3
+
+# Härtung
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/model-gallery
+
+[Install]
+WantedBy=multi-user.target

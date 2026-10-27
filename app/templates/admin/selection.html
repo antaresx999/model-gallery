@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Auswahl {{ reviewer.display_name }} · {{ album.title }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/admin/projekte">Projekte</a> / <a href="/admin/alben/{{ album.id }}#auswahlen">{{ album.title }}</a> / Auswahl</nav>
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Auswahl von {{ reviewer.display_name or reviewer.username }}</h1>
+    <div class="album-facts">
+      <span>{{ 'Gast' if reviewer.role == 'guest' else 'Kunde' }}</span>
+      {% if reviewer.email %}<span>{{ reviewer.email }}</span>{% endif %}
+      {% if reviewer.share_label %}<span>über Link «{{ reviewer.share_label }}»</span>{% endif %}
+      <span>{{ images|length }} Bilder</span>
+      {% if reviewer.completed_at %}<span class="pill pill-ok">✓ abgeschlossen am {{ reviewer.completed_at|local_dt }}</span>{% else %}<span class="pill">noch nicht abgeschlossen</span>{% endif %}
+    </div>
+    {% if reviewer.note %}<blockquote class="quote">„{{ reviewer.note }}“</blockquote>{% endif %}
+  </div>
+  <div class="album-actions">
+    {% if images %}<a class="btn" href="/admin/alben/{{ album.id }}/auswahl/{{ reviewer.id }}/export.csv">CSV exportieren</a>{% endif %}
+    {% if reviewer.completed_at %}
+    <form method="post" action="/admin/alben/{{ album.id }}/auswahl/{{ reviewer.id }}/oeffnen" data-confirm="Auswahl wieder zur Bearbeitung öffnen?">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn">Wieder öffnen</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if images %}
+<section class="panel">
+  <h2>Export für Lightroom / Capture One</h2>
+  <p class="muted small">Lightroom Classic: Bibliotheksfilter › Text › Dateiname › <i>enthält</i>, dann die Liste einfügen. Die Dateinamen sind ohne Endung und durch Leerzeichen getrennt, damit sie auch auf RAW-Dateien passen.</p>
+  <div class="share-url mb">
+    <input readonly value="{{ lightroom }}" onclick="this.select()">
+    <button type="button" class="btn btn-sm" data-copy="{{ lightroom }}">Kopieren</button>
+  </div>
+  <p class="muted small">Mit Endung, durch Komma getrennt:</p>
+  <div class="share-url">
+    <input readonly value="{{ comma }}" onclick="this.select()">
+    <button type="button" class="btn btn-sm" data-copy="{{ comma }}">Kopieren</button>
+  </div>
+</section>
+
+<div class="thumb-grid">
+  {% for img in images %}
+  <figure class="thumb">
+    <a href="/album/{{ album.slug }}/foto/{{ img.id }}"><img src="{{ media_url(img, 'thumb') }}" alt="" loading="lazy"></a>
+    <figcaption><span class="thumb-name">{{ img.original_name }}</span></figcaption>
+  </figure>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty"><p>Noch keine Bilder ausgewählt.</p></div>
+{% endif %}
+
+{% if comments %}
+<section class="panel">
+  <h2>Kommentare ({{ comments|length }})</h2>
+  <ul class="admin-comments">
+    {% for c in comments %}
+    <li class="{{ 'is-resolved' if c.resolved_at }}">
+      <a href="/album/{{ album.slug }}/foto/{{ c.image_id }}#kommentare"><img src="/media/{{ c.image_id }}/thumb?v={{ c.version }}" alt="" loading="lazy"></a>
+      <div>
+        <div><span class="kind-tag kind-{{ c.kind }}">{{ dict(COMMENT_KINDS)[c.kind] }}</span> <span class="muted small">{{ c.original_name }} · {{ c.created_at|local_dt }}{% if c.resolved_at %} · erledigt{% endif %}</span></div>
+        <p>{{ c.body }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

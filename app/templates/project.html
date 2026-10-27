@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ site_name }}{% endblock %}
+{% block content %}
+<nav class="crumbs">{% for label, href in crumbs %}{% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}{{ label }}{% endif %} / {% endfor %}{{ title }}</nav>
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    {% if description %}<p class="album-desc">{{ description }}</p>{% endif %}
+  </div>
+  {% if manage_url %}<a class="btn" href="{{ manage_url }}">Verwalten</a>{% endif %}
+</div>
+{% if subfolders or albums %}
+<div class="album-grid">
+  {% for c in subfolders %}
+    {% with href=root ~ "/ordner/" ~ c.folder.id, title=c.folder.name, kind="Ordner" %}{% include "_folder_card.html" %}{% endwith %}
+  {% endfor %}
+  {% for a in albums %}{% with href=album_base ~ a.slug %}{% include "_album_card.html" %}{% endwith %}{% endfor %}
+</div>
+{% else %}
+<div class="empty"><p>Hier ist noch nichts abgelegt.</p></div>
+{% endif %}
+{% endblock %}

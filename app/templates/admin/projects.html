@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Projekte · {{ site_name }}{% endblock %}
+{% block content %}
+<h1 class="page-title">Projekte</h1>
+<p class="muted">Ein Projekt ist das organisatorische Gefäss (z. B. ein Kunde oder Auftrag). Darin kannst du Ordner beliebig tief verschachteln. Alben liegen immer zuunterst und enthalten die Bilder.</p>
+
+<div class="admin-cols wide-left">
+  <section class="panel">
+    {% if projects %}
+    <ul class="item-list">
+      {% for p in projects %}
+      <li>
+        {% if p.cover_id %}<img src="/media/{{ p.cover_id }}/thumb" alt="" loading="lazy">{% else %}<span class="item-icon">▢</span>{% endif %}
+        <div class="item-main">
+          <a href="/admin/projekte/{{ p.id }}"><b>{{ p.title }}</b></a>
+          <div class="muted small">{{ p.album_count }} {{ 'Album' if p.album_count == 1 else 'Alben' }} · {{ p.folder_count }} Ordner · {{ p.image_count }} Bilder</div>
+        </div>
+        <a class="btn btn-sm" href="/projekt/{{ p.slug }}">Kundenansicht</a>
+        <a class="btn btn-sm" href="/admin/projekte/{{ p.id }}">Verwalten</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Noch keine Projekte.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Neues Projekt</h2>
+    <form method="post" action="/admin/projekte/neu" class="form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Name<input name="title" required maxlength="120" placeholder="z. B. Hochzeit Meier 2026"></label>
+      <label>Beschreibung (optional)<textarea name="description" rows="3" maxlength="2000"></textarea></label>
+      <button class="btn btn-primary">Projekt anlegen</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

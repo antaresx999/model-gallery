@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css?v=6">
+  <style>:root { --accent: {{ accent }}; --accent-hover: {{ accent_hover }}; }</style>
+  {% if settings.logo %}<link rel="icon" href="/branding/logo">{% else %}
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%23111'/><circle cx='12' cy='12' r='6' fill='none' stroke='%23e8b04b' stroke-width='2.5'/></svg>">{% endif %}
+</head>
+<body class="{% block body_class %}{% endblock %}" {% block body_attrs %}{% endblock %}>
+{% block header %}
+<header class="topbar">
+  <div class="topbar-inner{{ ' has-nav' if user }}">
+    <a class="brand" href="{{ '/admin/projekte' if user and user.role == 'admin' else '/' }}">
+      {% if settings.logo %}<img class="brand-logo" src="/branding/logo" alt="">{% else %}<span class="brand-mark"></span>{% endif %}
+      <span>{{ site_name }}</span>
+    </a>
+    <nav class="mainnav">
+      {% if user %}
+        {% set p = request.url.path %}
+        {% if user.role == 'admin' %}
+          <a href="/admin/projekte" class="{{ 'active' if p.startswith('/admin/projekte') or p.startswith('/admin/alben') or p.startswith('/projekt') or p.startswith('/album') }}">Projekte</a>
+          <a href="/admin" class="{{ 'active' if p == '/admin' }}">Workflow{% if unread %} <span class="nav-badge">{{ unread }}</span>{% endif %}</a>
+          <a href="/admin/benutzer" class="{{ 'active' if p.startswith('/admin/benutzer') }}">Benutzer</a>
+        {% else %}
+          <a href="/" class="{{ 'active' if p == '/' or p.startswith('/album') or p.startswith('/projekt') }}">Meine Galerien</a>
+        {% endif %}
+      {% endif %}
+    </nav>
+    <div class="usernav">
+      {% if user %}
+        <details class="usermenu">
+          <summary class="user-chip" title="{{ user.display_name or user.username }}">{{ (user.display_name or user.username)[:1]|upper }}</summary>
+          <div class="usermenu-panel">
+            <div class="usermenu-name">{{ user.display_name or user.username }}<span>@{{ user.username }} · {{ 'Administrator' if user.role == 'admin' else 'Kunde' }}</span></div>
+            <a href="/account">Mein Konto</a>
+            {% if user.role == 'admin' %}
+            <a href="/admin/einstellungen">Einstellungen</a>
+            <a href="/admin/protokoll">Protokoll</a>
+            {% endif %}
+            <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Abmelden</button></form>
+          </div>
+        </details>
+      {% elif acc and acc.reviewer %}
+        <span class="guest-chip" title="{{ acc.reviewer.email }}">{{ acc.reviewer.display_name }}</span>
+      {% elif not share %}
+        <a href="/login">Anmelden</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+{% endblock %}
+
+{% if flash %}
+<div class="flash flash-{{ flash.kind }}" role="status">{{ flash.msg }}</div>
+{% endif %}
+
+{% if user and user.role == 'admin' and not share and (request.url.path.startswith('/projekt') or (request.url.path.startswith('/album') and '/foto/' not in request.url.path)) %}
+<div class="preview-bar"><div class="container">Kundenansicht – so sehen freigegebene Kunden diese Seite.</div></div>
+{% endif %}
+<main class="{% block main_class %}container{% endblock %}">
+{% block content %}{% endblock %}
+</main>
+
+{% block footer %}
+<footer class="footer"><div class="container">© {{ site_name }} · Alle Bilder urheberrechtlich geschützt</div></footer>
+{% endblock %}
+<script src="/static/app.js?v=6"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

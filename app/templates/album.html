@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ album.title }} · {{ site_name }}{% endblock %}
+{% block body_attrs %}data-album="{{ album.id }}"{% if share %} data-share="{{ share.token }}"{% endif %}{% if acc.needs_identity %} data-needs-identity="1"{% endif %}{% endblock %}
+{% block content %}
+<nav class="crumbs">{% for label, href in crumbs %}{% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}{{ label }}{% endif %} / {% endfor %}{{ album.title }}</nav>
+
+<section class="album-head">
+  <div class="album-head-text">
+    <h1 class="page-title">{{ album.title }}
+      {% if not album.published %}<span class="badge badge-draft">Entwurf</span>{% endif %}
+    </h1>
+    <div class="album-facts">
+      <span>{{ image_count }} {{ 'Bild' if image_count == 1 else 'Bilder' }}</span>
+      {% if album.shoot_date %}<span>{{ album.shoot_date|de_date }}</span>{% endif %}
+      {% if album.location %}<span>{{ album.location }}</span>{% endif %}
+      {% if acc.download %}<span>{{ total_size|human_size }}</span>{% endif %}
+      {% if album.expires_at %}<span>verfügbar bis {{ album.expires_at|de_date }}</span>{% endif %}
+    </div>
+    {% if album.description %}<p class="album-desc">{{ album.description }}</p>{% endif %}
+  </div>
+  <div class="album-actions">
+    {% if acc.download and image_count %}
+      <a class="btn btn-primary" href="{{ base }}/download.zip">Alle herunterladen (ZIP)</a>
+      {% if acc.raw and images|selectattr('raw_stored')|list %}<a class="btn" href="{{ base }}/download.zip?raw=1" title="JPEGs und RAW-Dateien">Alle inkl. RAW (ZIP)</a>{% endif %}
+      {% if selected %}<a class="btn" href="{{ base }}/download.zip?filter=auswahl">Auswahl herunterladen ({{ selected|length }})</a>{% endif %}
+    {% endif %}
+    {% if user and user.role == 'admin' %}<a class="btn" href="/admin/alben/{{ album.id }}">Verwalten</a>{% endif %}
+  </div>
+</section>
+
+{% if acc.watermark %}
+<div class="notice">Vorschau mit Wasserzeichen – die finalen Bilder erhältst du nach der Bearbeitung.</div>
+{% endif %}
+
+{% if acc.needs_identity %}
+<div class="notice notice-action">
+  <span>Wähle deine Favoriten aus und hinterlasse Kommentare direkt auf den Bildern.</span>
+  <button class="btn btn-primary btn-sm" data-open-dialog="guest-dialog">Los geht's</button>
+</div>
+{% elif share and acc.reviewer %}
+<div class="notice">
+  <span>Du bist eingetragen als <b>{{ acc.reviewer.display_name }}</b> ({{ acc.reviewer.email }}).</span>
+  <form method="post" action="/s/{{ share.token }}/gast/abmelden" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="linkbtn-dark">Nicht du?</button></form>
+</div>
+{% endif %}
+
+{% if acc.select and acc.reviewer and image_count %}
+<div class="selection-bar{{ ' is-done' if done }}" data-selection-bar>
+  <div>
+    <b>Deine Auswahl:</b> <span data-sel-count>{{ selected|length }}</span>{% if album.selection_limit %} von {{ album.selection_limit }}{% endif %} {{ 'Bild' if selected|length == 1 else 'Bilder' }}
+    {% if done %}<span class="pill pill-ok">✓ Abgeschlossen am {{ done.completed_at|local_dt }}</span>{% endif %}
+  </div>
+  {% if not done %}
+    <button class="btn btn-primary btn-sm" data-open-dialog="complete-dialog" {{ 'disabled' if not selected }} data-complete-btn>Auswahl abschliessen</button>
+  {% else %}
+    <span class="muted small">Änderungen? Melde dich beim Fotografen.</span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if acc.select and image_count %}
+<div class="tabs">
+  <a href="{{ base }}" class="{{ 'active' if not only_sel }}">Alle Bilder</a>
+  <a href="{{ base }}?filter=auswahl" class="{{ 'active' if only_sel }}">♥ Meine Auswahl <span class="count" data-sel-count>{{ selected|length }}</span></a>
+</div>
+{% endif %}
+
+{% if images %}
+<div class="thumb-grid">
+  {% for img in images %}
+  <figure class="thumb{{ ' is-fav' if img.id in selected }}" data-id="{{ img.id }}">
+    <a href="{{ base }}/foto/{{ img.id }}" aria-label="{{ img.original_name }}">
+      <img src="{{ media_url(img, 'thumb', acc.watermark) }}" alt="" loading="lazy" width="{{ img.width }}" height="{{ img.height }}">
+    </a>
+    {% if comment_counts.get(img.id) %}<span class="badge badge-comments" title="Kommentare">💬 {{ comment_counts[img.id] }}</span>{% endif %}
+    {% if img.version > 1 %}<span class="badge badge-version" title="Bearbeitete Version">v{{ img.version }}</span>{% endif %}
+    <figcaption>
+      <span class="thumb-name" title="{{ img.original_name }}">{{ img.original_name }}</span>
+      <span class="thumb-tools">
+        {% if acc.select %}<button class="fav-btn" data-fav="{{ img.id }}" title="Auswählen" aria-pressed="{{ 'true' if img.id in selected else 'false' }}" {{ 'disabled' if acc.selection_done }}>♥</button>{% endif %}
+        {% if acc.download %}<a class="dl-btn" href="/media/{{ img.id }}/original?dl=1" title="Original herunterladen" download>↓</a>{% endif %}
+      </span>
+    </figcaption>
+  </figure>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  {% if only_sel %}<p>Noch nichts ausgewählt. Tippe auf ♥ bei einem Bild.</p>
+  {% else %}<p>Dieses Album enthält noch keine Bilder.</p>{% endif %}
+</div>
+{% endif %}
+
+{% if acc.select and acc.reviewer and not done %}
+<dialog class="dialog" id="complete-dialog">
+  <form class="form" data-complete-form="{{ album.id }}">
+    <h2>Auswahl abschliessen?</h2>
+    <p class="muted small">Du hast <b data-sel-count>{{ selected|length }}</b> Bilder ausgewählt. Nach dem Abschliessen wird {{ site_name }} benachrichtigt und die Auswahl kann nicht mehr geändert werden.</p>
+    <label>Nachricht an den Fotografen (optional)<textarea name="note" rows="3" maxlength="1000"></textarea></label>
+    <div class="form-actions">
+      <button class="btn btn-primary">Verbindlich abschliessen</button>
+      <button type="button" class="btn" data-close-dialog>Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+{% include "_guest_dialog.html" %}
+{% endblock %}

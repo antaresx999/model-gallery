@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Workflow · {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">Workflow</h1>
+  <div class="album-actions">
+    <div class="segmented">
+      <a href="/admin" class="{{ 'active' if view == 'board' }}">Board</a>
+      <a href="/admin?ansicht=raster" class="{{ 'active' if view == 'raster' }}">Raster</a>
+    </div>
+    <a class="btn btn-primary" href="/admin/alben/neu">+ Neues Album</a>
+  </div>
+</div>
+
+<div class="stats">
+  <div><b>{{ stats.albums }}</b><span>Alben</span></div>
+  <div><b>{{ stats.images }}</b><span>Bilder</span></div>
+  <div><b>{{ stats.bytes|human_size }}</b><span>Speicher</span></div>
+  <div><b>{{ stats.models }}</b><span>Kunden</span></div>
+  <div><b>{{ stats.shares }}</b><span>Permalinks</span></div>
+</div>
+
+<div class="dash-cols">
+  <div class="dash-main">
+    {% if not albums %}
+      <div class="empty"><p>Noch keine Alben. Lege dein erstes Album an.</p></div>
+    {% elif view == 'board' %}
+      <div class="board" data-board>
+        {% for key, label, items in columns %}
+        <section class="board-col" data-status="{{ key }}">
+          <header><span>{{ label }}</span><span class="count">{{ items|length }}</span></header>
+          <div class="board-cards" data-dropzone="{{ key }}">
+            {% for a in items %}
+            <a class="board-card" href="/admin/alben/{{ a.id }}" draggable="true" data-album-id="{{ a.id }}">
+              {% if a.cover_id %}<img src="/media/{{ a.cover_id }}/thumb" alt="" loading="lazy">{% endif %}
+              <div class="board-card-body">
+                {% if a.project_title %}<div class="project-ref">{{ a.project_title }}</div>{% endif %}
+                <strong>{{ a.title }}</strong>
+                <div class="board-card-meta">
+                  <span>{{ a.image_count }} Bilder</span>
+                  {% if a.shoot_date %}<span>{{ a.shoot_date|de_date }}</span>{% endif %}
+                </div>
+                <div class="board-card-tags">
+                  {% if not a.published %}<span class="pill">Entwurf</span>{% endif %}
+                  {% if a.selections_done %}<span class="pill pill-ok">✓ {{ a.selections_done }} Auswahl{{ 'en' if a.selections_done > 1 }}</span>{% endif %}
+                  {% if a.open_comments %}<span class="pill pill-warn">💬 {{ a.open_comments }} offen</span>{% endif %}
+                  {% if a.expires_at %}<span class="pill">bis {{ a.expires_at|de_date }}</span>{% endif %}
+                </div>
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+      <p class="muted small">Alben per Drag & Drop zwischen den Spalten verschieben.</p>
+    {% else %}
+      <div class="album-grid">
+        {% for a in albums %}{% with href="/admin/alben/" ~ a.id, show_project=True %}{% include "_album_card.html" %}{% endwith %}{% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <aside class="panel activity">
+    <h2>Neuigkeiten</h2>
+    {% if activity %}
+    <ul class="activity-list">
+      {% for e in activity %}
+      <li class="{{ 'is-new' if e.id > seen }}">
+        <span class="activity-icon">{{ '✓' if e.action == 'selection_complete' else '💬' }}</span>
+        <div>
+          <b>{{ e.actor_name or 'Unbekannt' }}</b> · {{ EVENT_LABELS.get(e.action, e.action) }}
+          {% if e.album_id %}<a href="/admin/alben/{{ e.album_id }}">{{ e.album_title or 'gelöschtes Album' }}</a>{% endif %}
+          {% if e.detail %}<div class="muted small clamp">{{ e.detail }}</div>{% endif %}
+          <div class="muted small">{{ e.at|local_dt }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    <a class="small" href="/admin/protokoll">Ganzes Protokoll →</a>
+    {% else %}
+    <p class="muted small">Sobald Kunden eine Auswahl abschliessen oder kommentieren, erscheint das hier.</p>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

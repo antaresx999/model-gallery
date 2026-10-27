@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ target.display_name or target.username }} · {{ site_name }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/admin/benutzer">Benutzer</a> / {{ target.username }}</nav>
+<h1 class="page-title">{{ target.display_name or target.username }}{% if target.role == 'plugin' %} <span class="badge badge-draft">Plugin</span>{% endif %}</h1>
+
+{% if target.role == 'plugin' %}
+{% if new_token %}
+<section class="panel token-panel">
+  <h2>API-Schlüssel</h2>
+  <p>Kopiere den Schlüssel jetzt und trage ihn im Lightroom-Plugin ein. <b>Er wird nur dieses eine Mal angezeigt.</b></p>
+  <div class="share-url">
+    <input readonly value="{{ new_token }}" onclick="this.select()">
+    <button type="button" class="btn btn-sm btn-primary" data-copy="{{ new_token }}">Kopieren</button>
+  </div>
+</section>
+{% endif %}
+<form method="post" class="form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="role" value="plugin">
+  <div class="admin-cols">
+    <section class="panel">
+      <h2>Plugin-Zugang</h2>
+      <label>Benutzername<input value="{{ target.username }}" disabled></label>
+      <label>Bezeichnung<input name="display_name" maxlength="80" value="{{ target.display_name }}" placeholder="z. B. Lightroom Studio-iMac"></label>
+      <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if target.active }}> Zugang aktiv</label>
+      <p class="muted small">Rolle: Lightroom-Plugin – darf nur Alben auflisten und Bilder hochladen. Keine Anmeldung im Web möglich.<br>
+        Angelegt am {{ target.created_at|de_date }} · Zuletzt verwendet: {{ target.last_login|local_dt if target.last_login else 'noch nie' }}</p>
+    </section>
+    <section class="panel">
+      <h2>Darf hochladen in</h2>
+      <p class="muted small">Ohne Auswahl: alle Projekte. Mit Auswahl sieht das Plugin nur die Alben dieser Projekte.</p>
+      {% if projects %}
+      <div class="checklist">
+        {% for p in projects %}
+        <label class="check"><input type="checkbox" name="project_ids" value="{{ p.id }}" {{ 'checked' if p.has_access }}> {{ p.title }}</label>
+        {% endfor %}
+      </div>
+      {% else %}<p class="muted">Noch keine Projekte vorhanden.</p>{% endif %}
+    </section>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary">Speichern</button></div>
+</form>
+
+<div class="admin-cols">
+  <section class="panel">
+    <h2>Lightroom einrichten</h2>
+    <ol class="steps">
+      <li><a href="/admin/plugin/lightroom.zip">Plugin herunterladen</a> und entpacken. Den Ordner <code>ModelGallery.lrplugin</code> an einen festen Ort legen.</li>
+      <li>Lightroom Classic → <i>Datei → Zusatzmodul-Manager → Hinzufügen</i> → den Ordner wählen.</li>
+      <li>Fotos auswählen → <i>Datei → Exportieren</i> → oben <i>Exportieren auf: Model Gallery</i>.</li>
+      <li>Server-Adresse <code>{{ public_base }}</code> und den API-Schlüssel eintragen, <i>Verbinden</i> klicken, Album wählen.</li>
+    </ol>
+  </section>
+  <section class="panel">
+    <h2>API-Schlüssel</h2>
+    <p class="muted small">Der Schlüssel ist nur verschlüsselt gespeichert und kann nicht erneut angezeigt werden. Bei Verlust erzeugst du einen neuen – der alte wird dabei sofort ungültig.</p>
+    <form method="post" action="/admin/benutzer/{{ target.id }}/schluessel" data-confirm="Neuen Schlüssel erzeugen? Der bisherige funktioniert danach nicht mehr.">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn">Neuen Schlüssel erzeugen und anzeigen</button>
+    </form>
+  </section>
+</div>
+{% else %}
+<form method="post" class="form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="admin-cols">
+    <section class="panel">
+      <h2>Profil</h2>
+      <label>Benutzername<input value="{{ target.username }}" disabled></label>
+      <label>Anzeigename<input name="display_name" maxlength="80" value="{{ target.display_name }}"></label>
+      <label>E-Mail<input name="email" type="email" value="{{ target.email }}"></label>
+      <label>Rolle
+        <select name="role" {{ 'disabled' if target.id == user.id }}>
+          <option value="model" {{ 'selected' if target.role == 'model' }}>Kunde</option>
+          <option value="admin" {{ 'selected' if target.role == 'admin' }}>Administrator</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if target.active }} {{ 'disabled' if target.id == user.id }}> Konto aktiv</label>
+      <label>Neues Passwort setzen<input name="password" type="text" autocomplete="new-password" placeholder="leer lassen = unverändert"></label>
+      <p class="muted small">Angelegt am {{ target.created_at|de_date }} · Letzte Anmeldung: {{ target.last_login|de_date if target.last_login else 'noch nie' }}</p>
+    </section>
+
+    <section class="panel">
+      <h2>Freigegebene Projekte</h2>
+      <p class="muted small">Zugriff auf ein Projekt gilt für alle veröffentlichten Alben darin, auch künftige.</p>
+      {% if projects %}
+      <div class="checklist">
+        {% for p in projects %}
+        <label class="check"><input type="checkbox" name="project_ids" value="{{ p.id }}" {{ 'checked' if p.has_access }}> {{ p.title }}</label>
+        {% endfor %}
+      </div>
+      {% else %}<p class="muted">Noch keine Projekte vorhanden.</p>{% endif %}
+      <h2 class="mt">Einzelne Alben</h2>
+      {% if target.role == 'admin' %}<p class="muted">Administratoren sehen alle Alben.</p>{% endif %}
+      {% if albums %}
+      <div class="checklist">
+        {% for a in albums %}
+        <label class="check">
+          <input type="checkbox" name="album_ids" value="{{ a.id }}" {{ 'checked' if a.has_access }}>
+          {{ a.title }} {% if a.shoot_date %}<span class="muted">{{ a.shoot_date|de_date }}</span>{% endif %}
+          {% if not a.published %}<span class="pill">Entwurf</span>{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}<p class="muted">Noch keine Alben vorhanden.</p>{% endif %}
+    </section>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary">Speichern</button></div>
+</form>
+
+{% endif %}
+
+{% if target.id != user.id %}
+<div class="panel narrow danger-zone">
+  <h2>Benutzer löschen</h2>
+  <form method="post" action="/admin/benutzer/{{ target.id }}/loeschen" data-confirm="Benutzer {{ target.username }} endgültig löschen?">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn btn-danger">Benutzer löschen</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

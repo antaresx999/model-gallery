@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Benutzer · {{ site_name }}{% endblock %}
+{% block content %}
+<h1 class="page-title">Benutzer</h1>
+
+<div class="admin-cols wide-left">
+  <section class="panel">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Benutzername</th><th>Rolle</th><th>Alben</th><th>Letzte Anmeldung</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+        <tr class="{{ 'inactive' if not u.active }}">
+          <td><a href="/admin/benutzer/{{ u.id }}">{{ u.display_name or u.username }}</a>{% if not u.active %} <span class="pill">inaktiv</span>{% endif %}</td>
+          <td class="muted">{{ u.username }}</td>
+          <td>{{ {'admin': 'Admin', 'model': 'Kunde', 'plugin': 'Lightroom-Plugin'}[u.role] }}</td>
+          <td>{% if u.role == 'admin' %}alle{% elif u.role == 'plugin' %}<span class="muted small">nur Upload{% if u.project_count %} · {{ u.project_count }} Projekt{{ 'e' if u.project_count > 1 }}{% else %} · alle Projekte{% endif %}</span>{% else %}{{ u.album_count }}{% if u.project_count %} <span class="muted small">+ {{ u.project_count }} Projekt{{ 'e' if u.project_count > 1 }}</span>{% endif %}{% endif %}</td>
+          <td class="muted">{{ u.last_login|de_date if u.last_login else '–' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Neuer Benutzer</h2>
+    <form method="post" action="/admin/benutzer/neu" class="form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Benutzername<input name="username" required pattern="[A-Za-z0-9._@\-]{2,64}" autocomplete="off"></label>
+      <label>Anzeigename<input name="display_name" maxlength="80"></label>
+      <label>E-Mail<input name="email" type="email"></label>
+      <label>Passwort<input name="password" type="text" autocomplete="new-password" placeholder="leer lassen = generieren"></label>
+      <label>Rolle
+        <select name="role" data-role-select><option value="model">Kunde</option><option value="admin">Administrator</option><option value="plugin">Lightroom-Plugin (nur Upload)</option></select>
+      </label>
+      <p class="muted small">Ein <b>Lightroom-Plugin</b>-Zugang meldet sich mit einem API-Schlüssel an und darf ausschliesslich Bilder in Alben hochladen. E-Mail und Passwort werden dafür nicht benötigt.</p>
+      <button class="btn btn-primary">Benutzer anlegen</button>
+    </form>
+  </section>
+</div>
+
+{% if guests %}
+<section class="panel">
+  <h2>Gäste über Permalinks</h2>
+  <p class="muted small">Gäste haben kein Passwort. Sie tragen sich beim Öffnen eines Permalinks mit Name und E-Mail ein. Wird der Link widerrufen, werden sie mit ihren Auswahlen entfernt.</p>
+  <table class="table compact">
+    <thead><tr><th>Name</th><th>E-Mail</th><th>Album / Projekt · Link</th><th>Zuletzt aktiv</th><th></th></tr></thead>
+    <tbody>
+    {% for g in guests %}
+      <tr>
+        <td>{{ g.display_name }}</td>
+        <td class="muted">{{ g.email }}</td>
+        <td>{% if g.album_id %}<a href="/admin/alben/{{ g.album_id }}#auswahlen">{{ g.album_title }}</a>{% else %}<a href="/admin/projekte/{{ g.project_id }}#links">Projekt {{ g.project_title }}</a>{% endif %}{% if g.share_label %} <span class="muted small">· {{ g.share_label }}</span>{% endif %}</td>
+        <td class="muted">{{ g.last_login|local_dt }}</td>
+        <td>{% if g.album_id %}<a class="btn btn-sm" href="/admin/alben/{{ g.album_id }}/auswahl/{{ g.id }}">Auswahl</a>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

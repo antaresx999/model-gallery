@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Meine Galerien · {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-head page-top">
+  <h1 class="page-title">Meine Galerien</h1>
+</div>
+{% if projects or albums %}
+<div class="album-grid">
+  {% for c in projects %}
+    {% with href="/projekt/" ~ c.project.slug, title=c.project.title, kind="Projekt" %}{% include "_folder_card.html" %}{% endwith %}
+  {% endfor %}
+  {% for a in albums %}{% with href="/album/" ~ a.slug %}{% include "_album_card.html" %}{% endwith %}{% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <p>Für dich sind noch keine Galerien freigegeben.</p>
+  <p class="muted">Sobald deine Bilder bereit sind, erscheinen sie hier.</p>
+</div>
+{% endif %}
+{% endblock %}

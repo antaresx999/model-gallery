@@ -1,0 +1,15 @@
+services:
+  gallery:
+    build: .
+    image: model-gallery:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      GALLERY_SITE_NAME: "Studio Galerie"
+      GALLERY_BASE_URL: "https://galerie.example.ch"   # für Permalinks
+      GALLERY_COOKIE_SECURE: "1"                       # 1 wenn hinter HTTPS
+      GALLERY_ADMIN_USER: "admin"
+      # GALLERY_ADMIN_PASSWORD: "..."                  # sonst wird eines generiert (data/initial-admin-password.txt)

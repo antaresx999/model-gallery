@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ image.original_name }} · {{ album.title }}{% endblock %}
+{% block body_class %}page-viewer{% endblock %}
+{% block body_attrs %}data-album="{{ album.id }}" data-image="{{ image.id }}"{% if share %} data-share="{{ share.token }}"{% endif %}{% if acc.needs_identity %} data-needs-identity="1"{% endif %}{% if acc.comment %} data-can-comment="1"{% endif %}{% if acc.is_admin %} data-admin="1"{% endif %}{% endblock %}
+{% block main_class %}viewer{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="viewer-bar">
+  <a class="viewer-back" href="{{ base }}" data-key-back>← {{ album.title }}</a>
+  <div class="viewer-bar-right">
+    <span class="viewer-count">Bild {{ index + 1 }} von {{ images|length }}</span>
+    <button class="viewer-tool" data-zoom title="Zoom (Z)">⤢ Zoom</button>
+  </div>
+</div>
+
+<div class="viewer-body">
+  <div class="viewer-stage" data-stage>
+    {% if prev %}<a class="nav-arrow nav-prev" href="{{ base }}/foto/{{ prev.id }}" data-key-prev aria-label="Vorheriges Bild">‹</a>{% endif %}
+    <img class="viewer-img" src="{{ media_url(image, 'preview', acc.watermark) }}" alt="{{ image.original_name }}" data-viewer-img draggable="false">
+    <div class="anno-layer" data-anno-layer></div>
+    {% if next %}<a class="nav-arrow nav-next" href="{{ base }}/foto/{{ next.id }}" data-key-next aria-label="Nächstes Bild">›</a>{% endif %}
+  </div>
+
+  <aside class="viewer-info">
+    <h1 class="viewer-title">{{ image.original_name }}{% if image.version > 1 %} <span class="pill">Version {{ image.version }}</span>{% endif %}</h1>
+    <div class="viewer-actions">
+      {% if acc.select %}
+        <button class="btn fav-toggle{{ ' is-fav' if is_selected }}" data-fav="{{ image.id }}" aria-pressed="{{ 'true' if is_selected else 'false' }}" {{ 'disabled' if acc.selection_done }}>
+          <span class="fav-on">♥ Ausgewählt</span><span class="fav-off">♡ Auswählen</span>
+        </button>
+        {% if acc.reviewer %}<div class="muted small">Deine Auswahl: <span data-sel-count>{{ selected|length }}</span>{% if album.selection_limit %} von {{ album.selection_limit }}{% endif %}{% if acc.selection_done %} · abgeschlossen{% endif %}</div>{% endif %}
+      {% endif %}
+      {% if acc.download %}
+        <a class="btn btn-primary" href="/media/{{ image.id }}/original?dl=1" download>Original herunterladen</a>
+      {% endif %}
+      {% if acc.raw and image.raw_stored %}
+        <a class="btn" href="/media/{{ image.id }}/raw" download>RAW herunterladen <span class="muted small">{{ image.raw_name.rsplit('.', 1)[-1]|upper }} · {{ image.raw_size|human_size }}</span></a>
+      {% endif %}
+    </div>
+
+    <div class="info-tabs" role="tablist">
+      <button role="tab" class="active" data-tab="info">Aufnahmedaten</button>
+      {% if acc.comment %}<button role="tab" data-tab="comments">Kommentare <span class="count" data-comment-count></span></button>{% endif %}
+    </div>
+
+    <div data-panel="info">
+      <dl class="exif">
+        {% if exif.camera %}<dt>Kamera</dt><dd>{{ exif.camera }}</dd>{% endif %}
+        {% if exif.lens %}<dt>Objektiv</dt><dd>{{ exif.lens }}</dd>{% endif %}
+        {% if exif.focal_length %}<dt>Brennweite</dt><dd>{{ exif.focal_length }}{% if exif.focal_length_35 %} <span class="muted">({{ exif.focal_length_35 }} KB)</span>{% endif %}</dd>{% endif %}
+        {% if exif.aperture %}<dt>Blende</dt><dd>{{ exif.aperture }}</dd>{% endif %}
+        {% if exif.exposure %}<dt>Belichtung</dt><dd>{{ exif.exposure }}</dd>{% endif %}
+        {% if exif.iso %}<dt>ISO</dt><dd>{{ exif.iso }}</dd>{% endif %}
+        {% if exif.exposure_bias %}<dt>Korrektur</dt><dd>{{ exif.exposure_bias }}</dd>{% endif %}
+        {% if exif.flash %}<dt>Blitz</dt><dd>{{ exif.flash }}</dd>{% endif %}
+        {% if exif.taken %}<dt>Aufgenommen</dt><dd>{{ exif.taken }}</dd>{% endif %}
+        <dt>Abmessungen</dt><dd>{{ image.width }} × {{ image.height }} px</dd>
+        <dt>Megapixel</dt><dd>{{ '%.1f'|format(image.width * image.height / 1000000) }} MP</dd>
+        {% if acc.download %}<dt>Dateigrösse</dt><dd>{{ image.size_bytes|human_size }}</dd>{% endif %}
+        {% if exif.artist %}<dt>Fotograf</dt><dd>{{ exif.artist }}</dd>{% endif %}
+        {% if exif.copyright %}<dt>Copyright</dt><dd>{{ exif.copyright }}</dd>{% endif %}
+      </dl>
+    </div>
+
+    {% if acc.comment %}
+    <div data-panel="comments" hidden>
+      <ul class="comment-list" data-comment-list></ul>
+      {% if acc.needs_identity %}
+        <p class="muted small">Um zu kommentieren, gib zuerst deinen Namen an.</p>
+        <button class="btn btn-sm" data-open-dialog="guest-dialog">Name angeben</button>
+      {% else %}
+      <form class="comment-form" data-comment-form>
+        <div class="kind-picker">
+          {% for key, label in COMMENT_KINDS %}
+          <label class="kind kind-{{ key }}"><input type="radio" name="kind" value="{{ key }}" {{ 'checked' if loop.first }}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+        <textarea name="body" rows="3" maxlength="2000" placeholder="Was soll geändert werden?" required></textarea>
+        <div class="comment-form-row">
+          <button type="button" class="btn btn-sm" data-mark-btn>◎ Auf Bild markieren</button>
+          <span class="muted small" data-mark-state></span>
+          <button class="btn btn-primary btn-sm">Senden</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+    <p class="viewer-hint">Tastatur: ← → blättern · Z Zoom · Esc zurück</p>
+  </aside>
+</div>
+
+<div class="filmstrip" data-filmstrip>
+  {% for i in images %}
+  <a href="{{ base }}/foto/{{ i.id }}" class="{{ 'current' if i.id == image.id }}{{ ' is-fav' if i.id in selected }}"{% if i.id == image.id %} aria-current="true"{% endif %}>
+    <img src="{{ media_url(i, 'thumb', acc.watermark) }}" alt="" loading="lazy">
+  </a>
+  {% endfor %}
+</div>
+{% if next %}<link rel="prefetch" href="{{ media_url(next, 'preview', acc.watermark) }}">{% endif %}
+{% include "_guest_dialog.html" %}
+{% endblock %}

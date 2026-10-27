@@ -1,0 +1,14 @@
+<a class="album-card folder-card" href="{{ href }}">
+  <div class="album-cover">
+    {% if c.cover_id %}<img src="/media/{{ c.cover_id }}/thumb?v={{ c.cover_version or 1 }}" alt="" loading="lazy">{% else %}<div class="album-cover-empty">Leer</div>{% endif %}
+    <span class="folder-tag">{{ kind }}</span>
+  </div>
+  <div class="album-meta">
+    <h3>{{ title }}</h3>
+    <div class="album-sub">
+      <span>{{ c.album_count }} {{ 'Album' if c.album_count == 1 else 'Alben' }}</span>
+      {% if c.subfolder_count %}<span>{{ c.subfolder_count }} {{ 'Ordner' }}</span>{% endif %}
+      {% if c.image_count %}<span>{{ c.image_count }} Bilder</span>{% endif %}
+    </div>
+  </div>
+</a>

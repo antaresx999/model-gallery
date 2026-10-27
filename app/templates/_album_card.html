@@ -1,0 +1,15 @@
+<a class="album-card" href="{{ href }}">
+  <div class="album-cover">
+    {% if a.cover_id %}<img src="/media/{{ a.cover_id }}/thumb?v={{ a.cover_version or 1 }}" alt="" loading="lazy">{% else %}<div class="album-cover-empty">Keine Bilder</div>{% endif %}
+    {% if not a.published %}<span class="badge badge-draft">Entwurf</span>{% endif %}
+  </div>
+  <div class="album-meta">
+    {% if show_project and a.project_title %}<div class="project-ref">{{ a.project_title }}</div>{% endif %}
+    <h3>{{ a.title }}</h3>
+    <div class="album-sub">
+      <span>{{ a.image_count }} {{ 'Bild' if a.image_count == 1 else 'Bilder' }}</span>
+      {% if a.shoot_date %}<span>{{ a.shoot_date|de_date }}</span>{% endif %}
+      {% if a.expires_at %}<span>bis {{ a.expires_at|de_date }}</span>{% endif %}
+    </div>
+  </div>
+</a>

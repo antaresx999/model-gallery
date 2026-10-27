@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} · {{ site_name }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/admin/projekte">Projekte</a> /
+  {% if folder %}<a href="/admin/projekte/{{ project.id }}">{{ project.title }}</a> /
+    {% for f in chain[:-1] %}<a href="/admin/projekte/{{ project.id }}?ordner={{ f.id }}">{{ f.name }}</a> / {% endfor %}{{ folder.name }}
+  {% else %}{{ project.title }}{% endif %}</nav>
+<div class="page-head">
+  <div>
+    <h1 class="page-title">{{ folder.name if folder else project.title }}</h1>
+    <div class="album-facts">
+      {% if folder %}<span>Ordner im Projekt {{ project.title }}</span>{% else %}<span>Projekt</span>{% endif %}
+      <span>{{ albums|length }} {{ 'Album' if albums|length == 1 else 'Alben' }} hier</span>
+      <span>{{ total_albums }} im Projekt</span>
+    </div>
+  </div>
+  <div class="album-actions">
+    <a class="btn" href="/projekt/{{ project.slug }}{{ '/ordner/' ~ folder.id if folder }}">Kundenansicht</a>
+    <a class="btn btn-primary" href="/admin/alben/neu?ort={{ location }}">+ Neues Album hier</a>
+  </div>
+</div>
+
+<div class="project-cols">
+  <aside class="panel">
+    <h2>Struktur</h2>
+    <ul class="folder-tree">
+      <li><a href="/admin/projekte/{{ project.id }}" class="{{ 'active' if not folder }}">▣ {{ project.title }}</a></li>
+      {% for depth, f in tree %}
+      <li><a href="/admin/projekte/{{ project.id }}?ordner={{ f.id }}" class="{{ 'active' if folder and folder.id == f.id }}"
+             style="padding-left: {{ 6 + (depth + 1) * 14 }}px">▸ {{ f.name }} <span class="muted">{{ counts.get(f.id, 0) }}</span></a></li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <div>
+    <section class="panel">
+      <h2>Ordner</h2>
+      {% if subfolders %}
+      <ul class="item-list">
+        {% for f in subfolders %}
+        {% set nsub, nalb = sub_counts[f.id] %}
+        <li>
+          <span class="item-icon">▸</span>
+          <div class="item-main">
+            <a href="/admin/projekte/{{ project.id }}?ordner={{ f.id }}"><b>{{ f.name }}</b></a>
+            <div class="muted small">{{ nsub }} Unterordner · {{ nalb }} {{ 'Album' if nalb == 1 else 'Alben' }}</div>
+          </div>
+          <details>
+            <summary class="small">Umbenennen / verschieben / löschen</summary>
+            <form method="post" action="/admin/ordner/{{ f.id }}/bearbeiten" class="form row-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <label>Name<input name="name" value="{{ f.name }}" maxlength="80" required></label>
+              <label>Liegt in
+                <select name="parent_id">
+                  {% for value, label in targets if value not in blocked[f.id] %}
+                  <option value="{{ value }}" {{ 'selected' if value == (f.parent_id|string if f.parent_id else '') }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <button class="btn btn-sm btn-primary">Speichern</button>
+            </form>
+            <form method="post" action="/admin/ordner/{{ f.id }}/loeschen" data-confirm="Ordner «{{ f.name }}» löschen?">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button class="btn btn-sm btn-danger" {{ 'disabled title="Nur leere Ordner können gelöscht werden"' if nsub or nalb }}>Ordner löschen</button>
+            </form>
+          </details>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <form method="post" action="/admin/projekte/{{ project.id }}/ordner" class="form row-form {{ 'mt' if subfolders }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="parent_id" value="{{ folder.id if folder else '' }}">
+        <label>Neuer Ordner{{ ' in «' ~ folder.name ~ '»' if folder }}<input name="name" maxlength="80" required placeholder="z. B. Tag 1 oder Portraits"></label>
+        <button class="btn">Ordner anlegen</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Alben</h2>
+      {% if albums %}
+      <ul class="item-list">
+        {% for a in albums %}
+        <li>
+          {% if a.cover_id %}<img src="/media/{{ a.cover_id }}/thumb" alt="" loading="lazy">{% else %}<span class="item-icon">▢</span>{% endif %}
+          <div class="item-main">
+            <a href="/admin/alben/{{ a.id }}"><b>{{ a.title }}</b></a>
+            {% if not a.published %}<span class="pill">Entwurf</span>{% endif %}
+            <div class="muted small">{{ a.image_count }} Bilder · {{ STATUS_LABELS.get(a.status, a.status) }}{% if a.shoot_date %} · {{ a.shoot_date|de_date }}{% endif %}</div>
+          </div>
+          <details>
+            <summary class="small">Verschieben</summary>
+            <form method="post" action="/admin/alben/{{ a.id }}/verschieben" class="form row-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="back" value="/admin/projekte/{{ project.id }}{{ '?ordner=' ~ folder.id if folder }}">
+              <label>Neuer Ablageort
+                <select name="location_ref">
+                  {% for value, label in locations %}<option value="{{ value }}" {{ 'selected' if value == location }}>{{ label }}</option>{% endfor %}
+                </select>
+              </label>
+              <button class="btn btn-sm btn-primary">Verschieben</button>
+            </form>
+          </details>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">Hier liegen noch keine Alben. <a href="/admin/alben/neu?ort={{ location }}">Neues Album hier anlegen →</a></p>
+      {% endif %}
+    </section>
+
+    <section class="panel" id="links">
+      <h2>Permalinks für das Projekt</h2>
+      <p class="muted small">Ein Projekt-Link öffnet alle veröffentlichten Alben des Projekts – oder nur die eines Ordners samt Unterordnern.
+        Neue Alben sind automatisch dabei. Gäste tragen sich einmal mit Name und E-Mail ein und können in jedem Album auswählen und kommentieren.</p>
+      {% if shares %}{% include "admin/_share_list.html" %}{% endif %}
+      <details {{ 'open' if not shares }}>
+        <summary>Neuen Projekt-Link erstellen</summary>
+        <form method="post" action="/admin/projekte/{{ project.id }}/links" class="form">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label>Bezeichnung<input name="label" maxlength="80" placeholder="z. B. für Familie Meier"></label>
+          <label>Umfang
+            <select name="folder_id">
+              <option value="">Ganzes Projekt «{{ project.title }}»</option>
+              {% for value, label in folder_targets %}<option value="{{ value }}" {{ 'selected' if folder and value == folder.id|string }}>Nur Ordner {{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <div class="form-row">
+            <label>Passwort (optional)<input name="password" type="text" autocomplete="off"></label>
+            <label>Gültig bis (optional)<input name="expires_at" type="date" min="{{ today }}"></label>
+          </div>
+          <label class="check"><input type="checkbox" name="can_select" value="1" checked> Bilder auswählen</label>
+          <label class="check"><input type="checkbox" name="can_comment" value="1" checked> Kommentieren & markieren</label>
+          <label class="check"><input type="checkbox" name="allow_download" value="1" checked> Download erlauben</label>
+          <label class="check"><input type="checkbox" name="watermark" value="1"> Wasserzeichen (Proofing, ohne Download)</label>
+          <p class="muted small">Die Einstellungen der einzelnen Alben gelten zusätzlich: Ist z. B. im Album der Download gesperrt, bleibt er gesperrt.</p>
+          <button class="btn btn-primary">Link erstellen</button>
+        </form>
+      </details>
+    </section>
+
+    {% if not folder %}
+    <section class="panel" id="zugriff">
+      <h2>Zugriff für Kunden</h2>
+      {% if customers %}
+      <p class="muted small">Kunden mit Projektzugriff sehen alle veröffentlichten Alben dieses Projekts, auch künftige. Einzelne Alben gibst du weiterhin auf der Albumseite frei.</p>
+      <form method="post" action="/admin/projekte/{{ project.id }}/zugriff" class="form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="checklist">
+          {% for u in customers %}
+          <label class="check">
+            <input type="checkbox" name="user_ids" value="{{ u.id }}" {{ 'checked' if u.has_access }}>
+            {{ u.display_name or u.username }} <span class="muted">@{{ u.username }}</span>
+            {% if not u.active %}<span class="pill">inaktiv</span>{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary">Zugriff speichern</button>
+      </form>
+      {% else %}
+      <p class="muted">Noch keine Kunden angelegt. <a href="/admin/benutzer">Benutzer verwalten →</a></p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if not folder %}
+    <section class="panel">
+      <h2>Projekt</h2>
+      <form method="post" action="/admin/projekte/{{ project.id }}/bearbeiten" class="form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>Name<input name="title" value="{{ project.title }}" maxlength="120" required></label>
+        <label>Beschreibung<textarea name="description" rows="3" maxlength="2000">{{ project.description }}</textarea></label>
+        <button class="btn btn-primary">Speichern</button>
+      </form>
+      <form method="post" action="/admin/projekte/{{ project.id }}/loeschen" class="mt" data-confirm="Projekt «{{ project.title }}» löschen?">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn btn-danger" {{ 'disabled title="Nur leere Projekte können gelöscht werden"' if total_albums }}>Projekt löschen</button>
+        {% if total_albums %}<span class="muted small">Nur leere Projekte können gelöscht werden.</span>{% endif %}
+      </form>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

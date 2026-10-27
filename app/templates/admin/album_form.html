@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Album bearbeiten' if album else 'Neues Album' }} · {{ site_name }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/admin/projekte">Projekte</a> /
+  {% if album %}<a href="/admin/alben/{{ album.id }}">{{ album.title }}</a> / Bearbeiten{% else %}Neues Album{% endif %}</nav>
+<h1 class="page-title">{{ 'Album bearbeiten' if album else 'Neues Album' }}</h1>
+<form method="post" class="form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="admin-cols">
+    <section class="panel">
+      <h2>Album</h2>
+      <label>Titel<input name="title" required maxlength="120" value="{{ album.title if album }}" placeholder="z. B. Studio-Shooting Anna"></label>
+      <label>Ablageort <span class="muted">(Projekt / Ordner)</span>
+        <select name="location_ref" required>
+          {% if not location %}<option value="" selected disabled>– bitte wählen –</option>{% endif %}
+          {% for value, label in locations %}<option value="{{ value }}" {{ 'selected' if value == location }}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="form-row">
+        <label>Aufnahmedatum<input type="date" name="shoot_date" value="{{ album.shoot_date if album }}"></label>
+        <label>Ort<input name="location" maxlength="120" value="{{ album.location if album }}" placeholder="z. B. Studio Zürich"></label>
+      </div>
+      <label>Beschreibung<textarea name="description" rows="4" maxlength="2000">{{ album.description if album }}</textarea></label>
+      <div class="form-row">
+        <label>Workflow-Status
+          <select name="status">
+            {% for key, label in STATUSES %}<option value="{{ key }}" {{ 'selected' if (album.status if album else 'auswahl') == key }}>{{ label }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Verfügbar bis (optional)<input type="date" name="expires_at" value="{{ album.expires_at or '' if album }}"></label>
+      </div>
+      <label class="check"><input type="checkbox" name="published" value="1" {{ 'checked' if not album or album.published }}> Veröffentlicht <span class="muted">– sonst nur für Administratoren sichtbar</span></label>
+    </section>
+
+    <section class="panel">
+      <h2>Auswahl & Feedback</h2>
+      <label class="check"><input type="checkbox" name="selection_enabled" value="1" {{ 'checked' if not album or album.selection_enabled }}> Kunden können Bilder auswählen</label>
+      <label>Maximale Anzahl ausgewählter Bilder <span class="muted">(0 = unbegrenzt)</span>
+        <input type="number" name="selection_limit" min="0" max="9999" value="{{ album.selection_limit if album else 0 }}"></label>
+      <label class="check"><input type="checkbox" name="comments_enabled" value="1" {{ 'checked' if not album or album.comments_enabled }}> Kommentare und Markierungen erlauben</label>
+      <h2 class="mt">Auslieferung</h2>
+      <label class="check"><input type="checkbox" name="allow_download" value="1" {{ 'checked' if not album or album.allow_download }}> Download der Originale erlauben</label>
+      <label class="check"><input type="checkbox" name="allow_raw" value="1" {{ 'checked' if album and album.allow_raw }}> Auch RAW-Dateien zum Download anbieten <span class="muted">– sofern vorhanden</span></label>
+      <label class="check"><input type="checkbox" name="watermark" value="1" {{ 'checked' if album and album.watermark }}> Vorschauen mit Wasserzeichen <span class="muted">– deaktiviert Downloads</span></label>
+      <p class="muted small">Wasserzeichen-Text und -Logo legst du in den <a href="/admin/einstellungen">Einstellungen</a> fest.</p>
+    </section>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary">{{ 'Speichern' if album else 'Album anlegen' }}</button>
+    <a class="btn" href="{{ '/admin/alben/' ~ album.id if album else '/admin/projekte' }}">Abbrechen</a>
+  </div>
+</form>
+{% if album %}
+<div class="panel narrow danger-zone mt">
+  <h2>Album löschen</h2>
+  <p class="muted">Löscht das Album mit allen Bildern, Permalinks, Auswahlen und Kommentaren endgültig.</p>
+  <form method="post" action="/admin/alben/{{ album.id }}/loeschen" data-confirm="Album «{{ album.title }}» mit allen Bildern endgültig löschen?">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn btn-danger">Album endgültig löschen</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
