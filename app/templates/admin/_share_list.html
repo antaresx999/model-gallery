@@ -13,6 +13,7 @@
             {% if s.can_comment %}<span class="pill">💬 Kommentare</span>{% endif %}
             {% if s.expires_at %}<span class="pill">{{ 'abgelaufen' if expired else 'bis' }} {{ s.expires_at|de_date }}</span>{% endif %}
             <span class="pill">{{ s.views }} Aufrufe · {{ s.guest_count }} Gäste</span>
+            <span class="pill {{ 'pill-ok' if s.last_used }}">{{ 'zuletzt geöffnet ' ~ (s.last_used|local_dt) if s.last_used else 'noch nie geöffnet' }}</span>
           </span>
         </div>
         <div class="share-url">

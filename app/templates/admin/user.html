@@ -109,6 +109,25 @@
   <div class="form-actions"><button class="btn btn-primary">Speichern</button></div>
 </form>
 
+{% if target.role == 'model' %}
+<section class="panel">
+  <div class="panel-head"><h2>Zuletzt angesehen</h2></div>
+  {% if recent_views %}
+  <table class="table compact">
+    <thead><tr><th>Zeit</th><th>Was</th><th>Zugang</th></tr></thead>
+    <tbody>
+    {% for e in recent_views %}
+      <tr>
+        <td class="nowrap muted">{{ e.at|local_dt }}</td>
+        <td>{% if e.album_id and e.album_title %}<a href="/admin/alben/{{ e.album_id }}">{{ e.album_title }}</a>{% else %}{{ EVENT_LABELS.get(e.action, e.action) }}{% endif %}</td>
+        <td class="muted">{{ e.detail }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">{{ target.display_name or target.username }} hat noch kein Album angesehen.</p>{% endif %}
+</section>
+{% endif %}
 {% endif %}
 
 {% if target.id != user.id %}

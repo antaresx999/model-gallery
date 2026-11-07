@@ -38,6 +38,10 @@ Die Funktionen sind an Moodcase angelehnt, das Layout an die DPreview-Galerie
 - **Neuigkeiten** im Dashboard (abgeschlossene Auswahlen, Kommentare) mit Zähler in der Navigation,
   optional zusätzlich per **E-Mail**
 - **Protokoll** aller Aktionen: Anmeldungen, Uploads, Downloads, Löschungen, Links, Auswahlen
+- **Zugriffsprotokoll**: Wer hat welches Album oder welchen Permalink wann geöffnet – auf jeder Albumseite
+  («Aufrufe»), bei jedem Kunden («Zuletzt angesehen»), bei jedem Link («zuletzt geöffnet») und im Protokoll
+  über den Filter «Zugriffe». Pro Person und Album höchstens ein Eintrag alle 30 Minuten; eigene Aufrufe als
+  Administrator werden nicht erfasst
 - **Userverwaltung**: Rollen *Administrator*, *Kunde* und *Lightroom-Plugin* (nur Upload, siehe unten). Kunden bekommen Zugriff auf einzelne Alben oder auf ein
   ganzes Projekt (inkl. künftiger Alben); dazu eine Gästeübersicht
 - **Permalinks** pro Album, pro Projekt oder pro Ordner (inkl. Unterordner): Passwort, Ablaufdatum,
@@ -200,6 +204,17 @@ python3 -m venv venv && venv/bin/pip install -r requirements.txt
 
 ```bash
 GALLERY_DATA=./data GALLERY_ADMIN_PASSWORD=admin12345 venv/bin/uvicorn app.main:app --reload --port 8080
+```
+
+Tests: Das Skript startet für jeden Test einen frischen Server mit leeren Daten (Port 8090). Für den Test des
+Lightroom-Plugins wird zusätzlich `lupa` (Lua 5.1 für Python) gebraucht.
+
+```bash
+venv/bin/pip install -r requirements-dev.txt
+```
+
+```bash
+tests/run.sh
 ```
 
 ## Lizenz

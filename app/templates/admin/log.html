@@ -5,11 +5,17 @@
   <h1 class="page-title">Protokoll</h1>
   <form method="get" class="inline-form">
     <select name="aktion" onchange="this.form.submit()" aria-label="Aktion filtern">
-      <option value="">Alle Aktionen ({{ total if not aktion }})</option>
+      {% if album %}<input type="hidden" name="album" value="{{ album.id }}">{% endif %}
+      <option value="">Alle Aktionen{% if not aktion %} ({{ total }}){% endif %}</option>
+      <option value="zugriffe" {{ 'selected' if aktion == 'zugriffe' }}>Zugriffe: Alben und Permalinks{% if aktion == 'zugriffe' %} ({{ total }}){% endif %}</option>
       {% for a in actions %}<option value="{{ a }}" {{ 'selected' if a == aktion }}>{{ EVENT_LABELS.get(a, a) }}</option>{% endfor %}
     </select>
   </form>
 </div>
+{% if album %}
+<p class="filter-chip">Nur Album <a href="/admin/alben/{{ album.id }}"><b>{{ album.title }}</b></a>
+  · <a href="/admin/protokoll{{ '?aktion=' ~ aktion if aktion }}">Filter entfernen</a></p>
+{% endif %}
 <section class="panel">
   {% if events %}
   <table class="table compact">
@@ -19,9 +25,9 @@
       <tr>
         <td class="nowrap muted">{{ e.at|local_dt }}</td>
         <td class="nowrap">{{ EVENT_LABELS.get(e.action, e.action) }}</td>
-        <td>{{ e.actor_name or '–' }}</td>
+        <td>{{ e.actor_name or ('Unbekannter Besucher' if e.action in ('album_view', 'share_opened') else '–') }}</td>
         <td>{% if e.album_id and e.album_title %}<a href="/admin/alben/{{ e.album_id }}">{{ e.album_title }}</a>{% else %}–{% endif %}</td>
-        <td class="muted clamp">{{ e.detail }}</td>
+        <td class="muted clamp">{{ e.detail or '–' }}</td>
         <td class="muted small nowrap">{{ e.ip }}</td>
       </tr>
     {% endfor %}
@@ -29,9 +35,9 @@
   </table>
   {% if pages > 1 %}
   <div class="pager">
-    {% if seite > 1 %}<a class="btn btn-sm" href="?aktion={{ aktion }}&seite={{ seite - 1 }}">← Neuer</a>{% endif %}
+    {% if seite > 1 %}<a class="btn btn-sm" href="?aktion={{ aktion }}{{ '&album=' ~ album.id if album }}&seite={{ seite - 1 }}">← Neuer</a>{% endif %}
     <span class="muted small">Seite {{ seite }} von {{ pages }}</span>
-    {% if seite < pages %}<a class="btn btn-sm" href="?aktion={{ aktion }}&seite={{ seite + 1 }}">Älter →</a>{% endif %}
+    {% if seite < pages %}<a class="btn btn-sm" href="?aktion={{ aktion }}{{ '&album=' ~ album.id if album }}&seite={{ seite + 1 }}">Älter →</a>{% endif %}
   </div>
   {% endif %}
   {% else %}

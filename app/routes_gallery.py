@@ -12,7 +12,7 @@ from . import db, images, structure
 from .security import hash_password, login_limiter, require_csrf, verify_password
 from .web import (COMMENT_LABELS, Redirect, album_access, api_access, album_expired, album_images, current_user,
                   flash, granted_share, local_dt, log_event, render, request_settings, require_user,
-                  safe_next, selected_ids, share_valid, client_ip)
+                  safe_next, selected_ids, share_label, share_valid, client_ip, log_access)
 
 router = APIRouter()
 
@@ -257,6 +257,7 @@ def _load_album_for_user(request, conn, slug):
 def album_view(request: Request, slug: str):
     with db.get() as conn:
         album, acc = _load_album_for_user(request, conn, slug)
+        log_access(conn, request, "album_view", album["id"], detail="direkt")
         return _album_page(request, conn, album, "/album/" + slug, acc)
 
 
@@ -320,14 +321,18 @@ def _share_title(conn, share, album):
 
 
 def _count_view(request, conn, share, album, actor=None):
+    """Aufrufzähler (einmal pro Browser) und Zugriffsprotokoll eines Permalinks. Admins zählen nicht."""
+    user = current_user(request)
+    if user is not None and user["role"] == "admin":
+        return
     key = "viewed_" + share["token"]
     if key not in request.session:
         request.session[key] = 1
-        conn.execute("UPDATE share_links SET views=views+1, last_used=datetime('now') WHERE id=?", (share["id"],))
-        detail = share["label"] or share["token"][:8]
-        if album is None:
-            detail = "Projekt «{}» · {}".format(_share_title(conn, share, None), detail)
-        log_event(conn, request, "share_opened", album["id"] if album else None, detail=detail, actor=actor)
+        conn.execute("UPDATE share_links SET views=views+1 WHERE id=?", (share["id"],))
+    detail = share_label(share)
+    if album is None:
+        detail = "Projekt «{}» · {}".format(_share_title(conn, share, None), detail)
+    log_access(conn, request, "share_opened", album["id"] if album else None, share=share, actor=actor, detail=detail)
 
 
 def _share_access(request, conn, token):
@@ -402,6 +407,7 @@ def _share_album_crumbs(conn, share, album):
 def share_album_view(request: Request, token: str, slug: str):
     with db.get() as conn:
         share, album, acc = _share_album(request, conn, token, slug)
+        log_access(conn, request, "album_view", album["id"], share=share, actor=acc.reviewer, detail=share_label(share))
         return _album_page(request, conn, album, "/s/{}/album/{}".format(token, slug), acc, share,
                            crumbs=_share_album_crumbs(conn, share, album))
 

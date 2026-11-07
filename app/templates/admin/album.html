@@ -31,6 +31,7 @@
 <nav class="subnav">
   <a href="#auswahlen">Auswahlen ({{ reviewers|selectattr('completed_at')|list|length }}/{{ reviewers|length }})</a>
   <a href="#kommentare">Offene Kommentare ({{ open_comments|length }})</a>
+  <a href="#aufrufe">Aufrufe ({{ visitors|length }})</a>
   <a href="#upload">Upload</a>
   <a href="#zugriff">Zugriff</a>
   <a href="#links">Permalinks ({{ shares|length }})</a>
@@ -81,6 +82,34 @@
     {% endif %}
   </section>
 </div>
+
+<section class="panel" id="aufrufe">
+  <div class="panel-head">
+    <h2>Aufrufe</h2>
+    <a class="small" href="/admin/protokoll?aktion=zugriffe&album={{ album.id }}">Alle Zugriffe im Protokoll →</a>
+  </div>
+  {% if visitors %}
+  <table class="table compact">
+    <thead><tr><th>Wer</th><th>Zugang</th><th>Aufrufe</th><th>Zuletzt</th><th>Zum ersten Mal</th></tr></thead>
+    <tbody>
+    {% for v in visitors %}
+      <tr>
+        <td>{% if v.actor_id and v.role == 'model' %}<a href="/admin/benutzer/{{ v.actor_id }}"><b>{{ v.name }}</b></a> <span class="muted small">Kunde</span>
+            {% elif v.actor_id %}<b>{{ v.name }}</b> <span class="muted small">Gast</span>
+            {% else %}<span class="muted">Unbekannter Besucher</span> <span class="muted small">{{ v.ip }}</span>{% endif %}</td>
+        <td>{% if v.share_id %}{% if v.share_alive %}Link «{{ v.share_label or 'ohne Bezeichnung' }}»{% else %}<span class="muted">widerrufener Link</span>{% endif %}{% else %}direkt (angemeldet){% endif %}</td>
+        <td>{{ v.visits }}</td>
+        <td class="nowrap">{{ v.last_at|local_dt }}</td>
+        <td class="nowrap muted">{{ v.first_at|local_dt }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">Ein Aufruf wird pro Person höchstens alle 30 Minuten gezählt. Deine eigenen Aufrufe als Administrator werden nicht erfasst.</p>
+  {% else %}
+  <p class="muted">Dieses Album wurde noch nicht aufgerufen.</p>
+  {% endif %}
+</section>
 
 <section class="panel" id="upload">
   <h2>Bilder hochladen</h2>

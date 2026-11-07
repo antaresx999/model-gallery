@@ -235,7 +235,13 @@ ALTER TABLE images ADD COLUMN raw_size INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE albums ADD COLUMN allow_raw INTEGER NOT NULL DEFAULT 0
 """
 
-MIGRATIONS = [V1, V2, V3, V4, V5]
+# Version 6: Zugriffsprotokoll – Ereignisse merken sich den verwendeten Permalink
+V6 = """
+ALTER TABLE events ADD COLUMN share_id INTEGER;
+CREATE INDEX idx_events_access ON events(album_id, action, id)
+"""
+
+MIGRATIONS = [V1, V2, V3, V4, V5, V6]
 
 # Bilder werden nach Aufnahmezeit, dann Dateiname sortiert.
 IMAGE_ORDER = "ORDER BY COALESCE(taken_at, created_at), original_name, id"

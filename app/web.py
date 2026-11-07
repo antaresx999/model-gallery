@@ -1,5 +1,6 @@
 """Gemeinsame Helfer: Templates, Sitzung, Zugriffsrechte, Einstellungen, Protokoll."""
 import re
+import time
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -53,6 +54,7 @@ EVENT_LABELS = {
     "share_created": "Permalink erstellt",
     "share_revoked": "Permalink widerrufen",
     "share_opened": "Permalink geöffnet",
+    "album_view": "Album angesehen",
     "guest_identified": "Gast hat sich eingetragen",
     "settings": "Einstellungen geändert",
 }
@@ -253,13 +255,56 @@ def today():
 # Protokoll & Benachrichtigungen
 # --------------------------------------------------------------------------- #
 
+def _actor_name(actor):
+    if not actor:
+        return ""
+    name = actor["display_name"] or actor["username"]
+    if actor["role"] == "guest" and actor["email"]:
+        name = "{} <{}>".format(name, actor["email"])
+    return name
+
+
+ACCESS_ACTIONS = ("share_opened", "album_view")
+ACCESS_INTERVAL = 30 * 60  # gleiche Person, gleiches Ziel: höchstens ein Eintrag pro 30 Minuten
+
+
+def share_label(share):
+    return "Link «{}»".format(share["label"]) if share["label"] else "Link ohne Bezeichnung"
+
+
+def log_access(conn, request, action, album_id=None, share=None, actor=None, detail=""):
+    """Aufruf eines Albums oder Permalinks für das Zugriffsprotokoll festhalten.
+
+    Aufrufe von Administratoren werden nicht erfasst. Wiederholte Aufrufe derselben Sitzung
+    (z. B. Blättern im Album) zählen innerhalb von 30 Minuten nur einmal.
+    """
+    user = current_user(request)
+    if user is not None and user["role"] == "admin":
+        return False
+    key = "{}:{}:{}".format(action, album_id or 0, share["id"] if share else 0)
+    now = int(time.time())
+    seen = dict(request.session.get("seen", {}))
+    if now - int(seen.get(key, 0)) < ACCESS_INTERVAL:
+        return False
+    seen[key] = now
+    if len(seen) > 40:  # Sitzungs-Cookie klein halten
+        seen = dict(sorted(seen.items(), key=lambda kv: kv[1])[-40:])
+    request.session["seen"] = seen
+    if actor is None and share is None:
+        actor = user
+    conn.execute(
+        """INSERT INTO events (action, actor_id, actor_name, album_id, detail, ip, share_id)
+           VALUES (?,?,?,?,?,?,?)""",
+        (action, actor["id"] if actor else None, _actor_name(actor), album_id, detail[:500],
+         client_ip(request), share["id"] if share else None))
+    if share is not None:
+        conn.execute("UPDATE share_links SET last_used=datetime('now') WHERE id=?", (share["id"],))
+    return True
+
+
 def log_event(conn, request, action, album_id=None, image_id=None, detail="", actor=None):
     actor = actor if actor is not None else (current_user(request) if request else None)
-    name = ""
-    if actor:
-        name = actor["display_name"] or actor["username"]
-        if actor["role"] == "guest" and actor["email"]:
-            name = "{} <{}>".format(name, actor["email"])
+    name = _actor_name(actor)
     conn.execute(
         """INSERT INTO events (action, actor_id, actor_name, album_id, image_id, detail, ip, notify)
            VALUES (?,?,?,?,?,?,?,?)""",

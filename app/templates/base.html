@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="csrf-token" content="{{ csrf }}">
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
-  <link rel="stylesheet" href="/static/style.css?v=6">
+  <link rel="stylesheet" href="/static/style.css?v=7">
   <style>:root { --accent: {{ accent }}; --accent-hover: {{ accent_hover }}; }</style>
   {% if settings.logo %}<link rel="icon" href="/branding/logo">{% else %}
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%23111'/><circle cx='12' cy='12' r='6' fill='none' stroke='%23e8b04b' stroke-width='2.5'/></svg>">{% endif %}
@@ -69,7 +69,7 @@
 {% block footer %}
 <footer class="footer"><div class="container">© {{ site_name }} · Alle Bilder urheberrechtlich geschützt</div></footer>
 {% endblock %}
-<script src="/static/app.js?v=6"></script>
+<script src="/static/app.js?v=7"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

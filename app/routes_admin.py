@@ -464,6 +464,19 @@ REVIEWERS_SQL = """
 """
 
 
+# Wer hat das Album aufgerufen? Pro Person und Zugangsweg zusammengefasst; anonyme Gäste nach IP.
+VISITORS_SQL = """
+    SELECT e.actor_id, MAX(e.actor_name) AS name, e.share_id, MAX(e.ip) AS ip, COUNT(*) AS visits,
+           MIN(e.at) AS first_at, MAX(e.at) AS last_at, u.role, sl.label AS share_label, sl.id AS share_alive
+    FROM events e
+    LEFT JOIN users u ON u.id = e.actor_id
+    LEFT JOIN share_links sl ON sl.id = e.share_id
+    WHERE e.album_id = ? AND e.action IN ('album_view', 'share_opened')
+    GROUP BY COALESCE('u' || e.actor_id, 'ip' || e.ip), COALESCE(e.share_id, 0)
+    ORDER BY last_at DESC LIMIT 100
+"""
+
+
 @router.get("/alben/{album_id}", response_class=HTMLResponse)
 def album_manage(request: Request, album_id: int):
     require_admin(request)
@@ -487,13 +500,14 @@ def album_manage(request: Request, album_id: int):
             """SELECT c.*, i.original_name, i.version FROM comments c JOIN images i ON i.id=c.image_id
                WHERE i.album_id=? AND c.parent_id IS NULL AND c.resolved_at IS NULL
                ORDER BY c.created_at DESC LIMIT 50""", (album_id,)).fetchall()
+        visitors = conn.execute(VISITORS_SQL, (album_id,)).fetchall()
         project = conn.execute("SELECT * FROM projects WHERE id=?", (album["project_id"],)).fetchone()
         chain = structure.folder_chain(structure.folders_of(conn, project["id"]), album["folder_id"]) if project else []
         project_links = [r for r in conn.execute("SELECT * FROM share_links WHERE project_id=?",
                                                  (album["project_id"] or -1,)).fetchall()
                          if structure.share_covers(conn, r, album)]
     return render(request, "admin/album.html", {
-        "project": project, "chain": chain, "project_links": project_links,
+        "project": project, "chain": chain, "project_links": project_links, "visitors": visitors,
         "album": album, "images": imgs, "models": models, "reviewers": reviewers, "shares": shares,
         "open_comments": open_comments, "public_base": public_base(request), "today": today(),
         "total_size": sum(i["size_bytes"] for i in imgs),
@@ -759,10 +773,15 @@ def user_detail(request: Request, user_id: int):
         projects = conn.execute(
             """SELECT p.*, EXISTS(SELECT 1 FROM project_access pa WHERE pa.project_id=p.id AND pa.user_id=?) AS has_access
                FROM projects p ORDER BY p.title COLLATE NOCASE""", (user_id,)).fetchall()
+        recent_views = conn.execute(
+            """SELECT e.*, a.title AS album_title FROM events e LEFT JOIN albums a ON a.id=e.album_id
+               WHERE e.actor_id=? AND e.action IN ('album_view', 'share_opened')
+               ORDER BY e.id DESC LIMIT 15""", (user_id,)).fetchall()
     new_token = request.session.pop("new_token", None)
     token = new_token["token"] if new_token and new_token.get("uid") == user_id else None
     return render(request, "admin/user.html", {"target": target, "albums": albums, "projects": projects,
-                                               "new_token": token, "public_base": public_base(request)})
+                                               "new_token": token, "public_base": public_base(request),
+                                               "recent_views": recent_views})
 
 
 @router.post("/benutzer/{user_id}")
@@ -923,20 +942,28 @@ def settings_testmail(request: Request, csrf: str = Form("")):
 # --------------------------------------------------------------------------- #
 
 @router.get("/protokoll", response_class=HTMLResponse)
-def event_log(request: Request, aktion: str = "", seite: int = 1):
+def event_log(request: Request, aktion: str = "", album: Optional[int] = None, seite: int = 1):
     require_admin(request)
     per_page = 100
     seite = max(1, seite)
-    where, args = "", []
-    if aktion:
-        where, args = "WHERE e.action=?", [aktion]
+    conds, args = [], []
+    if aktion == "zugriffe":
+        conds.append("e.action IN ('album_view', 'share_opened')")
+    elif aktion:
+        conds.append("e.action=?")
+        args.append(aktion)
+    if album:
+        conds.append("e.album_id=?")
+        args.append(album)
+    where = ("WHERE " + " AND ".join(conds)) if conds else ""
     with db.get() as conn:
         total = conn.execute("SELECT COUNT(*) FROM events e " + where, args).fetchone()[0]
         rows = conn.execute(
             """SELECT e.*, a.title AS album_title FROM events e LEFT JOIN albums a ON a.id=e.album_id
                {} ORDER BY e.id DESC LIMIT ? OFFSET ?""".format(where), args + [per_page, (seite - 1) * per_page]).fetchall()
         actions = [r[0] for r in conn.execute("SELECT DISTINCT action FROM events ORDER BY action")]
+        album_row = conn.execute("SELECT id, title FROM albums WHERE id=?", (album,)).fetchone() if album else None
     return render(request, "admin/log.html", {
-        "events": rows, "actions": actions, "aktion": aktion, "seite": seite,
+        "events": rows, "actions": actions, "aktion": aktion, "seite": seite, "album": album_row,
         "pages": max(1, (total + per_page - 1) // per_page), "total": total,
     })

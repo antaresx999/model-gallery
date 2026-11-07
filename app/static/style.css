@@ -379,7 +379,8 @@ form.inline, .inline-form { display: inline; margin: 0; }
 .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .segmented a { padding: 7px 14px; font-size: .82rem; font-weight: 600; text-decoration: none; color: var(--muted); background: var(--surface); }
 .segmented a.active { background: var(--text); color: var(--bg); }
-.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+/* Spalten teilen sich die Breite; erst auf schmalen Bildschirmen seitlich scrollen (siehe unten) */
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; padding-bottom: 8px; }
 .board-col { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 240px; }
 .board-col header { display: flex; justify-content: space-between; padding: 10px 12px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); }
 .board-col header .count { color: var(--muted); }
@@ -495,3 +496,11 @@ main.container > .admin-cols:first-child, main.container > form:first-child { ma
 .token-panel { border-color: var(--accent); }
 .steps { margin: 0; padding-left: 20px; line-height: 1.7; font-size: .92rem; }
 .steps code, .token-panel code { background: var(--surface-2); padding: 1px 5px; border-radius: 3px; font-size: .85em; }
+.filter-chip { font-size: .85rem; color: var(--muted); margin: -8px 0 14px; }
+
+/* Breite Arbeitsansichten (Workflow-Board): auf grossen Bildschirmen mehr Platz nutzen */
+.layout-wide .container, .layout-wide .topbar-inner { max-width: min(2560px, 96vw); }
+@media (min-width: 2000px) { .layout-wide .dash-cols { grid-template-columns: 1fr 360px; } }
+/* Mittlere Breiten: «Neuigkeiten» unter das Board, damit alle Spalten Platz haben; nur ganz schmal seitlich scrollen */
+@media (max-width: 1180px) { .dash-cols { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .board { grid-auto-columns: minmax(200px, 1fr); overflow-x: auto; } }
