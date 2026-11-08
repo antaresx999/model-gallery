@@ -4,8 +4,8 @@
 <div class="page-head">
   <h1 class="page-title">Protokoll</h1>
   <form method="get" class="inline-form">
+    {% if album %}<input type="hidden" name="album" value="{{ album.id }}">{% endif %}
     <select name="aktion" onchange="this.form.submit()" aria-label="Aktion filtern">
-      {% if album %}<input type="hidden" name="album" value="{{ album.id }}">{% endif %}
       <option value="">Alle Aktionen{% if not aktion %} ({{ total }}){% endif %}</option>
       <option value="zugriffe" {{ 'selected' if aktion == 'zugriffe' }}>Zugriffe: Alben und Permalinks{% if aktion == 'zugriffe' %} ({{ total }}){% endif %}</option>
       {% for a in actions %}<option value="{{ a }}" {{ 'selected' if a == aktion }}>{{ EVENT_LABELS.get(a, a) }}</option>{% endfor %}
