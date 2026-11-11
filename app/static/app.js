@@ -354,10 +354,52 @@
     });
   });
 
-  // Bestätigung für gefährliche Aktionen
+  // Bestätigung für gefährliche Aktionen. Eigener Dialog statt confirm(): Eingebettete Browser
+  // (z. B. Vorschaufenster) unterdrücken confirm() und antworten stillschweigend mit «Abbrechen».
+  function askConfirm(msg, onYes) {
+    var dlg = document.createElement("dialog");
+    if (!dlg.showModal) { if (window.confirm(msg)) onYes(); return; }
+    dlg.className = "dialog";
+    var form = document.createElement("form");
+    form.className = "form";
+    form.method = "dialog";
+    var h = document.createElement("h2");
+    h.textContent = "Bitte bestätigen";
+    var p = document.createElement("p");
+    p.textContent = msg;
+    var row = document.createElement("div");
+    row.className = "form-actions";
+    var yes = document.createElement("button");
+    yes.className = "btn btn-primary";
+    yes.value = "ja";
+    yes.textContent = "Ja, fortfahren";
+    var no = document.createElement("button");
+    no.className = "btn";
+    no.value = "nein";
+    no.textContent = "Abbrechen";
+    row.appendChild(yes); row.appendChild(no);
+    form.appendChild(h); form.appendChild(p); form.appendChild(row);
+    dlg.appendChild(form);
+    document.body.appendChild(dlg);
+    dlg.addEventListener("close", function () {
+      var ok = dlg.returnValue === "ja";
+      dlg.remove();
+      if (ok) onYes();
+    });
+    dlg.showModal();
+    no.focus();
+  }
   document.addEventListener("submit", function (ev) {
-    var msg = ev.target.getAttribute("data-confirm");
-    if (msg && !confirm(msg)) ev.preventDefault();
+    var form = ev.target;
+    var msg = form.getAttribute("data-confirm");
+    if (!msg || form._confirmed) return;
+    ev.preventDefault();
+    var submitter = ev.submitter;
+    askConfirm(msg, function () {
+      form._confirmed = true;
+      if (form.requestSubmit) form.requestSubmit(submitter || undefined); else form.submit();
+      form._confirmed = false;
+    });
   });
 
   // ---------- Upload mit Drag & Drop und Fortschritt ----------
