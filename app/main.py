@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import config, db
+from . import __version__, config, db
 from .routes_admin import api as admin_api
 from .routes_admin import router as admin_router
 from .routes_gallery import router as gallery_router
@@ -72,4 +72,4 @@ def bootstrap_admin():
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok"}
+    return {"status": "ok", "version": __version__}

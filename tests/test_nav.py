@@ -1,5 +1,6 @@
 """Menü, Startseiten, Brotkrumen und alle Hauptseiten für Admin, Kunde und Gast."""
 import io
+import json
 import re
 
 from PIL import Image
@@ -75,4 +76,6 @@ s, b, _ = G.req("/s/" + tok)
 ok(s == 200 and nav(b).strip() == "" and "Kundenansicht" not in b and "usermenu" not in b, "guest: no nav, no menu")
 s, b, _ = G.req("/s/%s/album/album-eins" % tok)
 ok(s == 200, "guest album")
+ver = json.loads(G.req("/healthz")[1])["version"]
+ok(ver and "footer-version" in b and "· v" + ver in b, "version in footer and healthz")
 done()

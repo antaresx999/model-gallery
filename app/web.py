@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from . import config, images, notify
+from . import __version__, config, images, notify
 from .security import csrf_token
 
 BASE_DIR = Path(__file__).parent
@@ -96,6 +96,7 @@ templates.env.globals["STATUSES"] = STATUSES
 templates.env.globals["STATUS_LABELS"] = STATUS_LABELS
 templates.env.globals["COMMENT_KINDS"] = COMMENT_KINDS
 templates.env.globals["EVENT_LABELS"] = EVENT_LABELS
+templates.env.globals["VERSION"] = __version__
 
 
 # --------------------------------------------------------------------------- #

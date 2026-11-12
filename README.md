@@ -196,6 +196,9 @@ Die Datenbank wird beim Start automatisch migriert. Alben, Bilder, Benutzer und 
 bisherige Favoriten werden zu Auswahlen. Bestehende Alben landen im Projekt «Allgemein», das du danach umbenennen
 oder aufteilen kannst. Sichere vorher trotzdem das Datenverzeichnis.
 
+Welche Version läuft, steht unten in der Fusszeile jeder Seite (z. B. «v1.2.0») und in der Antwort von `/healthz`.
+Die Nummer wird in `app/__init__.py` gepflegt.
+
 ## Lokal entwickeln
 
 ```bash
